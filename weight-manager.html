@@ -15,6 +15,7 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+    /* ── 라이트 모드 ── */
     :root {
       --bg: #f4f6f9;
       --card: #ffffff;
@@ -25,12 +26,20 @@
       --sub: #64748b;
       --border: #e2e8f0;
       --radius: 12px;
+      --shadow: 0 1px 4px rgba(0,0,0,0.08);
     }
 
-    html, body {
-      width: 100%;
-      overflow-x: hidden;
+    /* ── 다크 모드 ── */
+    body.dark {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --text: #e2e8f0;
+      --sub: #94a3b8;
+      --border: #334155;
+      --shadow: 0 1px 4px rgba(0,0,0,0.4);
     }
+
+    html, body { width: 100%; overflow-x: hidden; }
 
     body {
       font-family: 'Segoe UI', system-ui, sans-serif;
@@ -38,16 +47,40 @@
       color: var(--text);
       min-height: 100vh;
       padding: 16px;
+      transition: background 0.25s, color 0.25s;
     }
 
-    h1 {
-      text-align: center;
+    /* ── 헤더 ── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      margin-bottom: 20px;
+    }
+
+    .header h1 {
       font-size: 1.6rem;
       font-weight: 700;
-      margin-bottom: 24px;
       color: var(--primary);
     }
 
+    .dark-toggle {
+      position: absolute;
+      right: 0;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 6px 12px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+      line-height: 1;
+    }
+
+    .dark-toggle:hover { border-color: var(--primary); }
+
+    /* ── 그리드 ── */
     .grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -60,11 +93,13 @@
       .grid { grid-template-columns: 1fr; }
     }
 
+    /* ── 카드 ── */
     .card {
       background: var(--card);
       border-radius: var(--radius);
       padding: 20px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      box-shadow: var(--shadow);
+      transition: background 0.25s, box-shadow 0.25s;
     }
 
     .card.full { grid-column: 1 / -1; }
@@ -78,6 +113,7 @@
       margin-bottom: 14px;
     }
 
+    /* ── 폼 ── */
     label {
       display: block;
       font-size: 0.85rem;
@@ -99,11 +135,12 @@
       color: var(--text);
       background: var(--bg);
       outline: none;
-      transition: border-color 0.2s;
+      transition: border-color 0.2s, background 0.25s, color 0.25s;
     }
 
     input:focus { border-color: var(--primary); }
 
+    /* ── 버튼 ── */
     .btn {
       width: 100%;
       margin-top: 14px;
@@ -116,12 +153,14 @@
       transition: background 0.2s;
     }
 
-    .btn-primary { background: var(--primary); color: #fff; }
-    .btn-primary:hover { background: var(--primary-dark); }
-    .btn-danger { background: var(--danger); color: #fff; margin-top: 8px; }
-    .btn-danger:hover { background: #dc2626; }
+    .btn-primary  { background: var(--primary); color: #fff; }
+    .btn-primary:hover  { background: var(--primary-dark); }
+    .btn-danger   { background: var(--danger); color: #fff; margin-top: 8px; }
+    .btn-danger:hover   { background: #dc2626; }
+    .btn-secondary { background: var(--border); color: var(--text); }
+    .btn-secondary:hover { filter: brightness(0.92); }
 
-    /* Stats */
+    /* ── 통계 ── */
     .stats-row {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -133,6 +172,7 @@
       background: var(--bg);
       border-radius: 8px;
       padding: 12px 6px;
+      transition: background 0.25s;
     }
 
     .stat-box .val {
@@ -147,10 +187,9 @@
       margin-top: 2px;
     }
 
-    /* Chart */
+    /* ── 그래프 ── */
     .chart-wrap { position: relative; height: 220px; }
 
-    /* Filter */
     .filter-row {
       display: flex;
       gap: 8px;
@@ -175,7 +214,14 @@
       border-color: var(--primary);
     }
 
-    /* Table */
+    /* ── 목표 바 ── */
+    .goal-bar-wrap { margin-top: 12px; }
+    .goal-label { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--sub); margin-bottom: 6px; }
+    .goal-bar { height: 10px; background: var(--bg); border-radius: 99px; overflow: hidden; border: 1px solid var(--border); }
+    .goal-fill { height: 100%; background: var(--primary); border-radius: 99px; transition: width 0.5s; }
+    .no-data { color: var(--sub); font-size: 0.85rem; margin-top: 8px; }
+
+    /* ── 테이블 ── */
     #tableWrap { overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; font-size: 0.88rem; min-width: 320px; }
     th { text-align: left; padding: 8px 10px; color: var(--sub); font-weight: 600; border-bottom: 2px solid var(--border); }
@@ -183,9 +229,9 @@
     tr:last-child td { border-bottom: none; }
     tr:hover td { background: var(--bg); }
 
-    .change-up { color: #ef4444; font-weight: 600; }
+    .change-up   { color: #ef4444; font-weight: 600; }
     .change-down { color: #22c55e; font-weight: 600; }
-    .change-eq { color: var(--sub); }
+    .change-eq   { color: var(--sub); }
 
     .del-btn {
       background: none;
@@ -200,30 +246,23 @@
 
     .empty { text-align: center; color: var(--sub); padding: 30px 0; font-size: 0.9rem; }
 
-    /* Goal bar */
-    .goal-bar-wrap { margin-top: 12px; }
-    .goal-label { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--sub); margin-bottom: 6px; }
-    .goal-bar { height: 10px; background: var(--bg); border-radius: 99px; overflow: hidden; border: 1px solid var(--border); }
-    .goal-fill { height: 100%; background: var(--primary); border-radius: 99px; transition: width 0.5s; }
-
-    .no-data { color: var(--sub); font-size: 0.85rem; margin-top: 8px; }
-
-    /* Backup */
+    /* ── 백업 ── */
     .backup-row { display: flex; gap: 8px; margin-top: 14px; }
     .backup-row .btn { margin-top: 0; }
-    .btn-secondary { background: #e2e8f0; color: var(--text); }
-    .btn-secondary:hover { background: #cbd5e1; }
     .restore-info { font-size: 0.8rem; color: var(--sub); margin-top: 8px; }
     #fileInput { display: none; }
   </style>
 </head>
 <body>
 
-<h1>⚖️ 체중관리</h1>
+<div class="header">
+  <h1>⚖️ 체중관리</h1>
+  <button class="dark-toggle" onclick="toggleDark()" id="darkBtn">🌙</button>
+</div>
 
 <div class="grid">
 
-  <!-- 입력 -->
+  <!-- 1. 기록 입력 -->
   <div class="card">
     <h2>기록 입력</h2>
     <label>날짜</label>
@@ -235,26 +274,7 @@
     <button class="btn btn-primary" onclick="addRecord()">기록 저장</button>
   </div>
 
-  <!-- 목표 & 통계 -->
-  <div class="card">
-    <h2>목표 설정</h2>
-    <label>시작 체중 (kg)</label>
-    <input type="number" id="goalStart" step="0.1" placeholder="예: 75.0" />
-    <label>목표 체중 (kg)</label>
-    <input type="number" id="goalTarget" step="0.1" placeholder="예: 65.0" />
-    <button class="btn btn-primary" onclick="saveGoal()">목표 저장</button>
-    <div class="goal-bar-wrap" id="goalSection" style="display:none">
-      <div class="goal-label">
-        <span id="goalStartLbl"></span>
-        <span id="goalPct"></span>
-        <span id="goalTargetLbl"></span>
-      </div>
-      <div class="goal-bar"><div class="goal-fill" id="goalFill"></div></div>
-      <p class="no-data" id="goalMsg"></p>
-    </div>
-  </div>
-
-  <!-- 통계 -->
+  <!-- 2. 통계 -->
   <div class="card">
     <h2>통계</h2>
     <div class="stats-row">
@@ -287,16 +307,7 @@
     </div>
   </div>
 
-  <!-- BMI -->
-  <div class="card">
-    <h2>BMI 계산기</h2>
-    <label>키 (cm)</label>
-    <input type="number" id="bmiHeight" step="0.1" placeholder="예: 170" />
-    <button class="btn btn-primary" onclick="calcBMI()">BMI 계산</button>
-    <div id="bmiResult" style="margin-top:12px; font-size:0.9rem; color:var(--sub);"></div>
-  </div>
-
-  <!-- 그래프 -->
+  <!-- 3. 체중 추이 -->
   <div class="card full">
     <h2>체중 추이</h2>
     <div class="filter-row">
@@ -310,7 +321,42 @@
     </div>
   </div>
 
-  <!-- 백업/복원 -->
+  <!-- 4. 목표 설정 -->
+  <div class="card">
+    <h2>목표 설정</h2>
+    <label>시작 체중 (kg)</label>
+    <input type="number" id="goalStart" step="0.1" placeholder="예: 75.0" />
+    <label>목표 체중 (kg)</label>
+    <input type="number" id="goalTarget" step="0.1" placeholder="예: 65.0" />
+    <button class="btn btn-primary" onclick="saveGoal()">목표 저장</button>
+    <div class="goal-bar-wrap" id="goalSection" style="display:none">
+      <div class="goal-label">
+        <span id="goalStartLbl"></span>
+        <span id="goalPct"></span>
+        <span id="goalTargetLbl"></span>
+      </div>
+      <div class="goal-bar"><div class="goal-fill" id="goalFill"></div></div>
+      <p class="no-data" id="goalMsg"></p>
+    </div>
+  </div>
+
+  <!-- 5. BMI -->
+  <div class="card">
+    <h2>BMI 계산기</h2>
+    <label>키 (cm)</label>
+    <input type="number" id="bmiHeight" step="0.1" placeholder="예: 170" />
+    <button class="btn btn-primary" onclick="calcBMI()">BMI 계산</button>
+    <div id="bmiResult" style="margin-top:12px; font-size:0.9rem; color:var(--sub);"></div>
+  </div>
+
+  <!-- 6. 기록 목록 -->
+  <div class="card full">
+    <h2>기록 목록</h2>
+    <div id="tableWrap"></div>
+    <button class="btn btn-danger" onclick="clearAll()" style="max-width:200px">전체 삭제</button>
+  </div>
+
+  <!-- 7. 백업/복원 -->
   <div class="card full">
     <h2>백업 / 복원</h2>
     <p class="restore-info">모든 기록·목표·키 데이터를 JSON 파일로 내보내거나 불러올 수 있습니다.</p>
@@ -322,34 +368,43 @@
     <p class="restore-info" id="restoreMsg"></p>
   </div>
 
-  <!-- 기록 목록 -->
-  <div class="card full">
-    <h2>기록 목록</h2>
-    <div id="tableWrap"></div>
-    <button class="btn btn-danger" onclick="clearAll()" style="max-width:200px">전체 삭제</button>
-  </div>
-
 </div>
 
 <script>
-  // ── Storage ──────────────────────────────────────────────
   const KEY_RECORDS = 'wm_records';
   const KEY_GOAL    = 'wm_goal';
   const KEY_HEIGHT  = 'wm_height';
+  const KEY_DARK    = 'wm_dark';
 
   function load(key) {
     try { return JSON.parse(localStorage.getItem(key)) || null; } catch { return null; }
   }
   function save(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
-
   function getRecords() { return load(KEY_RECORDS) || []; }
   function saveRecords(r) { save(KEY_RECORDS, r); }
+
+  // ── 다크모드 ─────────────────────────────────────────────
+  function toggleDark() {
+    const isDark = document.body.classList.toggle('dark');
+    document.getElementById('darkBtn').textContent = isDark ? '☀️' : '🌙';
+    save(KEY_DARK, isDark);
+    updateChart(getRecords());
+  }
+
+  function initDark() {
+    const isDark = load(KEY_DARK);
+    if (isDark) {
+      document.body.classList.add('dark');
+      document.getElementById('darkBtn').textContent = '☀️';
+    }
+  }
 
   // ── Init ─────────────────────────────────────────────────
   let chartRange = 7;
   let weightChart = null;
 
   document.addEventListener('DOMContentLoaded', () => {
+    initDark();
     document.getElementById('inputDate').value = today();
     loadGoalUI();
     loadHeightUI();
@@ -389,8 +444,7 @@
   // ── Delete ───────────────────────────────────────────────
   function deleteRecord(date) {
     if (!confirm(`${date} 기록을 삭제할까요?`)) return;
-    const records = getRecords().filter(r => r.date !== date);
-    saveRecords(records);
+    saveRecords(getRecords().filter(r => r.date !== date));
     render();
   }
 
@@ -406,7 +460,6 @@
     const target = parseFloat(document.getElementById('goalTarget').value);
     if (isNaN(start) || isNaN(target)) return alert('시작/목표 체중을 입력해주세요.');
     save(KEY_GOAL, { start, target });
-    loadGoalUI();
     updateGoalProgress();
   }
 
@@ -429,9 +482,9 @@
     document.getElementById('goalTargetLbl').textContent = `${g.target}kg`;
 
     if (records.length === 0) {
-      document.getElementById('goalPct').textContent = '0%';
-      document.getElementById('goalFill').style.width = '0%';
-      document.getElementById('goalMsg').textContent = '기록을 입력하면 진행률이 표시됩니다.';
+      document.getElementById('goalPct').textContent     = '0%';
+      document.getElementById('goalFill').style.width   = '0%';
+      document.getElementById('goalMsg').textContent    = '기록을 입력하면 진행률이 표시됩니다.';
       return;
     }
 
@@ -439,14 +492,12 @@
     const total   = Math.abs(g.start - g.target);
     const done    = Math.abs(g.start - current);
     const pct     = total === 0 ? 100 : Math.min(100, Math.round(done / total * 100));
-    const diff    = (current - g.target).toFixed(1);
+    const diff    = Math.abs((current - g.target).toFixed(1));
     const reached = (g.target >= g.start ? current >= g.target : current <= g.target);
 
-    document.getElementById('goalPct').textContent = `${pct}%`;
-    document.getElementById('goalFill').style.width = `${pct}%`;
-    document.getElementById('goalMsg').textContent = reached
-      ? '🎉 목표 달성!'
-      : `목표까지 ${Math.abs(diff)}kg 남았습니다.`;
+    document.getElementById('goalPct').textContent   = `${pct}%`;
+    document.getElementById('goalFill').style.width  = `${pct}%`;
+    document.getElementById('goalMsg').textContent   = reached ? '🎉 목표 달성!' : `목표까지 ${diff}kg 남았습니다.`;
   }
 
   // ── BMI ──────────────────────────────────────────────────
@@ -464,15 +515,15 @@
     const el = document.getElementById('bmiResult');
     if (records.length === 0) { el.innerHTML = '체중 기록이 없습니다.'; return; }
 
-    const w = records[records.length - 1].weight;
-    const h = hVal / 100;
+    const w   = records[records.length - 1].weight;
+    const h   = hVal / 100;
     const bmi = (w / (h * h)).toFixed(1);
 
     let cat = '', color = '';
-    if (bmi < 18.5)      { cat = '저체중'; color = '#3b82f6'; }
-    else if (bmi < 23)   { cat = '정상';   color = '#22c55e'; }
-    else if (bmi < 25)   { cat = '과체중'; color = '#f59e0b'; }
-    else if (bmi < 30)   { cat = '비만';   color = '#ef4444'; }
+    if      (bmi < 18.5) { cat = '저체중';  color = '#3b82f6'; }
+    else if (bmi < 23)   { cat = '정상';    color = '#22c55e'; }
+    else if (bmi < 25)   { cat = '과체중';  color = '#f59e0b'; }
+    else if (bmi < 30)   { cat = '비만';    color = '#ef4444'; }
     else                  { cat = '고도비만'; color = '#7f1d1d'; }
 
     el.innerHTML = `BMI: <strong style="color:${color};font-size:1.2rem">${bmi}</strong> <span style="color:${color}">(${cat})</span><br><span style="font-size:0.8rem">정상 범위: 18.5 ~ 22.9</span>`;
@@ -481,31 +532,26 @@
   // ── Stats ─────────────────────────────────────────────────
   function updateStats(records) {
     if (records.length === 0) {
-      ['statCurrent','statWeekAvg','statMonthAvg','statMin','statMax','statTotal'].forEach(id => {
-        document.getElementById(id).textContent = '—';
-      });
+      ['statCurrent','statWeekAvg','statMonthAvg','statMin','statMax','statTotal']
+        .forEach(id => { document.getElementById(id).textContent = '—'; });
       return;
     }
 
     const weights = records.map(r => r.weight);
-    const now = new Date();
-
-    const last7  = records.filter(r => daysDiff(r.date, now) <= 7).map(r => r.weight);
-    const last30 = records.filter(r => daysDiff(r.date, now) <= 30).map(r => r.weight);
-
-    const avg = arr => arr.length ? (arr.reduce((a,b) => a+b, 0) / arr.length).toFixed(1) : '—';
+    const now     = new Date();
+    const last7   = records.filter(r => daysDiff(r.date, now) <= 7).map(r => r.weight);
+    const last30  = records.filter(r => daysDiff(r.date, now) <= 30).map(r => r.weight);
+    const avg     = arr => arr.length ? (arr.reduce((a,b) => a+b,0) / arr.length).toFixed(1) : '—';
 
     const current = weights[weights.length - 1];
-    const first   = weights[0];
-    const diff    = (current - first).toFixed(1);
-    const diffStr = diff > 0 ? `+${diff}` : `${diff}`;
+    const diff    = (current - weights[0]).toFixed(1);
 
     document.getElementById('statCurrent').textContent  = `${current}kg`;
     document.getElementById('statWeekAvg').textContent  = last7.length  ? `${avg(last7)}kg`  : '—';
     document.getElementById('statMonthAvg').textContent = last30.length ? `${avg(last30)}kg` : '—';
     document.getElementById('statMin').textContent      = `${Math.min(...weights)}kg`;
     document.getElementById('statMax').textContent      = `${Math.max(...weights)}kg`;
-    document.getElementById('statTotal').textContent    = `${diffStr}kg`;
+    document.getElementById('statTotal').textContent    = `${diff > 0 ? '+' : ''}${diff}kg`;
   }
 
   function daysDiff(dateStr, now) {
@@ -521,19 +567,21 @@
   }
 
   function updateChart(records) {
-    const now = new Date();
+    const isDark   = document.body.classList.contains('dark');
+    const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
+    const tickColor = isDark ? '#94a3b8' : '#64748b';
+
+    const now      = new Date();
     const filtered = chartRange === 0
       ? records
       : records.filter(r => daysDiff(r.date, now) <= chartRange);
 
-    const labels  = filtered.map(r => r.date.slice(5));
-    const data    = filtered.map(r => r.weight);
-    const goal    = load(KEY_GOAL);
-    const goalLine = goal ? data.map(() => goal.target) : [];
+    const labels   = filtered.map(r => r.date.slice(5));
+    const data     = filtered.map(r => r.weight);
+    const goal     = load(KEY_GOAL);
 
     if (weightChart) weightChart.destroy();
 
-    const ctx = document.getElementById('weightChart').getContext('2d');
     const datasets = [{
       label: '체중 (kg)',
       data,
@@ -546,10 +594,10 @@
       fill: true,
     }];
 
-    if (goalLine.length) {
+    if (goal && data.length) {
       datasets.push({
         label: '목표',
-        data: goalLine,
+        data: data.map(() => goal.target),
         borderColor: '#22c55e',
         borderDash: [6, 4],
         borderWidth: 1.5,
@@ -558,18 +606,26 @@
       });
     }
 
-    weightChart = new Chart(ctx, {
+    weightChart = new Chart(document.getElementById('weightChart').getContext('2d'), {
       type: 'line',
       data: { labels, datasets },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: { legend: { position: 'bottom', labels: { boxWidth: 14, font: { size: 12 } } } },
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: { boxWidth: 14, font: { size: 12 }, color: tickColor }
+          }
+        },
         scales: {
-          x: { grid: { display: false }, ticks: { maxTicksLimit: 8, font: { size: 11 } } },
+          x: {
+            grid: { display: false },
+            ticks: { maxTicksLimit: 8, font: { size: 11 }, color: tickColor }
+          },
           y: {
-            grid: { color: 'rgba(0,0,0,0.05)' },
-            ticks: { callback: v => `${v}kg`, font: { size: 11 } },
+            grid: { color: gridColor },
+            ticks: { callback: v => `${v}kg`, font: { size: 11 }, color: tickColor },
             suggestedMin: data.length ? Math.min(...data) - 2 : 50,
             suggestedMax: data.length ? Math.max(...data) + 2 : 90,
           }
@@ -591,9 +647,9 @@
       let changeHTML = '<span class="change-eq">—</span>';
       if (prev) {
         const d = (r.weight - prev.weight).toFixed(1);
-        if (d > 0) changeHTML = `<span class="change-up">▲ ${d}</span>`;
+        if      (d > 0) changeHTML = `<span class="change-up">▲ ${d}</span>`;
         else if (d < 0) changeHTML = `<span class="change-down">▼ ${Math.abs(d)}</span>`;
-        else changeHTML = '<span class="change-eq">→ 0</span>';
+        else             changeHTML = '<span class="change-eq">→ 0</span>';
       }
       return `<tr>
         <td>${r.date}</td>
@@ -622,9 +678,8 @@
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
-    const date = new Date().toISOString().slice(0, 10);
     a.href     = url;
-    a.download = `체중관리_백업_${date}.json`;
+    a.download = `체중관리_백업_${new Date().toISOString().slice(0,10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -636,22 +691,17 @@
     reader.onload = ev => {
       try {
         const data = JSON.parse(ev.target.result);
-        if (!Array.isArray(data.records)) throw new Error('형식 오류');
+        if (!Array.isArray(data.records)) throw new Error();
 
-        const msg = document.getElementById('restoreMsg');
         const existing = getRecords();
-
         if (existing.length > 0) {
           if (!confirm(`기존 기록 ${existing.length}개가 있습니다.\n백업 파일과 병합할까요?\n(취소 시 기존 데이터를 덮어씁니다)`)) {
-            // 덮어쓰기
             saveRecords(data.records);
           } else {
-            // 병합: 날짜 기준 중복 제거, 백업 우선
             const merged = [...existing];
             data.records.forEach(r => {
               const idx = merged.findIndex(m => m.date === r.date);
-              if (idx >= 0) merged[idx] = r;
-              else merged.push(r);
+              if (idx >= 0) merged[idx] = r; else merged.push(r);
             });
             merged.sort((a, b) => a.date.localeCompare(b.date));
             saveRecords(merged);
@@ -663,12 +713,14 @@
         if (data.goal)   save(KEY_GOAL, data.goal);
         if (data.height) save(KEY_HEIGHT, data.height);
 
+        const msg = document.getElementById('restoreMsg');
         msg.style.color = '#22c55e';
         msg.textContent = `복원 완료 — 기록 ${getRecords().length}개 불러왔습니다.`;
         render();
       } catch {
-        document.getElementById('restoreMsg').style.color = '#ef4444';
-        document.getElementById('restoreMsg').textContent = '파일 형식이 올바르지 않습니다.';
+        const msg = document.getElementById('restoreMsg');
+        msg.style.color = '#ef4444';
+        msg.textContent = '파일 형식이 올바르지 않습니다.';
       }
       e.target.value = '';
     };
@@ -682,7 +734,6 @@
     updateChart(records);
     updateTable(records);
     updateGoalProgress();
-
     const h = load(KEY_HEIGHT);
     if (h) calcBMI();
   }
