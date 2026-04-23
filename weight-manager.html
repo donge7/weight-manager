@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#4f8ef7" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="체중관리" />
+  <title>체중관리</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icon-192.svg" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f4f6f9;
+      --card: #ffffff;
+      --primary: #4f8ef7;
+      --primary-dark: #3a74e0;
+      --danger: #ef4444;
+      --text: #1e293b;
+      --sub: #64748b;
+      --border: #e2e8f0;
+      --radius: 12px;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin-bottom: 24px;
+      color: var(--primary);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    @media (max-width: 640px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 20px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+
+    .card.full { grid-column: 1 / -1; }
+
+    .card h2 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--sub);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 14px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      color: var(--sub);
+      margin-bottom: 4px;
+      margin-top: 10px;
+    }
+
+    label:first-of-type { margin-top: 0; }
+
+    input[type="date"],
+    input[type="number"],
+    input[type="text"] {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.95rem;
+      color: var(--text);
+      background: var(--bg);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input:focus { border-color: var(--primary); }
+
+    .btn {
+      width: 100%;
+      margin-top: 14px;
+      padding: 10px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-danger { background: var(--danger); color: #fff; margin-top: 8px; }
+    .btn-danger:hover { background: #dc2626; }
+
+    /* Stats */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .stat-box {
+      text-align: center;
+      background: var(--bg);
+      border-radius: 8px;
+      padding: 12px 6px;
+    }
+
+    .stat-box .val {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .stat-box .lbl {
+      font-size: 0.75rem;
+      color: var(--sub);
+      margin-top: 2px;
+    }
+
+    /* Chart */
+    .chart-wrap { position: relative; height: 220px; }
+
+    /* Filter */
+    .filter-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+
+    .filter-btn {
+      padding: 5px 14px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      font-size: 0.82rem;
+      cursor: pointer;
+      background: var(--card);
+      color: var(--sub);
+      transition: all 0.15s;
+    }
+
+    .filter-btn.active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+
+    /* Table */
+    table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    th { text-align: left; padding: 8px 10px; color: var(--sub); font-weight: 600; border-bottom: 2px solid var(--border); }
+    td { padding: 8px 10px; border-bottom: 1px solid var(--border); }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--bg); }
+
+    .change-up { color: #ef4444; font-weight: 600; }
+    .change-down { color: #22c55e; font-weight: 600; }
+    .change-eq { color: var(--sub); }
+
+    .del-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #cbd5e1;
+      font-size: 1rem;
+      transition: color 0.15s;
+      padding: 2px 6px;
+    }
+    .del-btn:hover { color: var(--danger); }
+
+    .empty { text-align: center; color: var(--sub); padding: 30px 0; font-size: 0.9rem; }
+
+    /* Goal bar */
+    .goal-bar-wrap { margin-top: 12px; }
+    .goal-label { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--sub); margin-bottom: 6px; }
+    .goal-bar { height: 10px; background: var(--bg); border-radius: 99px; overflow: hidden; border: 1px solid var(--border); }
+    .goal-fill { height: 100%; background: var(--primary); border-radius: 99px; transition: width 0.5s; }
+
+    .no-data { color: var(--sub); font-size: 0.85rem; margin-top: 8px; }
+  </style>
+</head>
+<body>
+
+<h1>⚖️ 체중관리</h1>
+
+<div class="grid">
+
+  <!-- 입력 -->
+  <div class="card">
+    <h2>기록 입력</h2>
+    <label>날짜</label>
+    <input type="date" id="inputDate" />
+    <label>체중 (kg)</label>
+    <input type="number" id="inputWeight" step="0.1" min="20" max="300" placeholder="0.0" />
+    <label>메모 (선택)</label>
+    <input type="text" id="inputMemo" placeholder="예: 운동함, 과식" maxlength="30" />
+    <button class="btn btn-primary" onclick="addRecord()">기록 저장</button>
+  </div>
+
+  <!-- 목표 & 통계 -->
+  <div class="card">
+    <h2>목표 설정</h2>
+    <label>시작 체중 (kg)</label>
+    <input type="number" id="goalStart" step="0.1" placeholder="예: 75.0" />
+    <label>목표 체중 (kg)</label>
+    <input type="number" id="goalTarget" step="0.1" placeholder="예: 65.0" />
+    <button class="btn btn-primary" onclick="saveGoal()">목표 저장</button>
+    <div class="goal-bar-wrap" id="goalSection" style="display:none">
+      <div class="goal-label">
+        <span id="goalStartLbl"></span>
+        <span id="goalPct"></span>
+        <span id="goalTargetLbl"></span>
+      </div>
+      <div class="goal-bar"><div class="goal-fill" id="goalFill"></div></div>
+      <p class="no-data" id="goalMsg"></p>
+    </div>
+  </div>
+
+  <!-- 통계 -->
+  <div class="card">
+    <h2>통계</h2>
+    <div class="stats-row">
+      <div class="stat-box">
+        <div class="val" id="statCurrent">—</div>
+        <div class="lbl">현재 체중</div>
+      </div>
+      <div class="stat-box">
+        <div class="val" id="statWeekAvg">—</div>
+        <div class="lbl">7일 평균</div>
+      </div>
+      <div class="stat-box">
+        <div class="val" id="statMonthAvg">—</div>
+        <div class="lbl">30일 평균</div>
+      </div>
+    </div>
+    <div class="stats-row" style="margin-top:10px">
+      <div class="stat-box">
+        <div class="val" id="statMin">—</div>
+        <div class="lbl">최저</div>
+      </div>
+      <div class="stat-box">
+        <div class="val" id="statMax">—</div>
+        <div class="lbl">최고</div>
+      </div>
+      <div class="stat-box">
+        <div class="val" id="statTotal">—</div>
+        <div class="lbl">총 변화</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BMI -->
+  <div class="card">
+    <h2>BMI 계산기</h2>
+    <label>키 (cm)</label>
+    <input type="number" id="bmiHeight" step="0.1" placeholder="예: 170" />
+    <button class="btn btn-primary" onclick="calcBMI()">BMI 계산</button>
+    <div id="bmiResult" style="margin-top:12px; font-size:0.9rem; color:var(--sub);"></div>
+  </div>
+
+  <!-- 그래프 -->
+  <div class="card full">
+    <h2>체중 추이</h2>
+    <div class="filter-row">
+      <button class="filter-btn active" onclick="setRange(7, this)">7일</button>
+      <button class="filter-btn" onclick="setRange(30, this)">30일</button>
+      <button class="filter-btn" onclick="setRange(90, this)">90일</button>
+      <button class="filter-btn" onclick="setRange(0, this)">전체</button>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="weightChart"></canvas>
+    </div>
+  </div>
+
+  <!-- 기록 목록 -->
+  <div class="card full">
+    <h2>기록 목록</h2>
+    <div id="tableWrap"></div>
+    <button class="btn btn-danger" onclick="clearAll()" style="max-width:200px">전체 삭제</button>
+  </div>
+
+</div>
+
+<script>
+  // ── Storage ──────────────────────────────────────────────
+  const KEY_RECORDS = 'wm_records';
+  const KEY_GOAL    = 'wm_goal';
+  const KEY_HEIGHT  = 'wm_height';
+
+  function load(key) {
+    try { return JSON.parse(localStorage.getItem(key)) || null; } catch { return null; }
+  }
+  function save(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
+
+  function getRecords() { return load(KEY_RECORDS) || []; }
+  function saveRecords(r) { save(KEY_RECORDS, r); }
+
+  // ── Init ─────────────────────────────────────────────────
+  let chartRange = 7;
+  let weightChart = null;
+
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('inputDate').value = today();
+    loadGoalUI();
+    loadHeightUI();
+    render();
+  });
+
+  function today() {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  // ── Add Record ───────────────────────────────────────────
+  function addRecord() {
+    const date   = document.getElementById('inputDate').value;
+    const weight = parseFloat(document.getElementById('inputWeight').value);
+    const memo   = document.getElementById('inputMemo').value.trim();
+
+    if (!date) return alert('날짜를 입력해주세요.');
+    if (isNaN(weight) || weight <= 0) return alert('체중을 올바르게 입력해주세요.');
+
+    const records = getRecords();
+    const existing = records.findIndex(r => r.date === date);
+
+    if (existing >= 0) {
+      if (!confirm('같은 날짜 기록이 있습니다. 덮어쓸까요?')) return;
+      records[existing] = { date, weight, memo };
+    } else {
+      records.push({ date, weight, memo });
+    }
+
+    records.sort((a, b) => a.date.localeCompare(b.date));
+    saveRecords(records);
+    document.getElementById('inputWeight').value = '';
+    document.getElementById('inputMemo').value = '';
+    render();
+  }
+
+  // ── Delete ───────────────────────────────────────────────
+  function deleteRecord(date) {
+    if (!confirm(`${date} 기록을 삭제할까요?`)) return;
+    const records = getRecords().filter(r => r.date !== date);
+    saveRecords(records);
+    render();
+  }
+
+  function clearAll() {
+    if (!confirm('모든 기록을 삭제할까요?')) return;
+    saveRecords([]);
+    render();
+  }
+
+  // ── Goal ─────────────────────────────────────────────────
+  function saveGoal() {
+    const start  = parseFloat(document.getElementById('goalStart').value);
+    const target = parseFloat(document.getElementById('goalTarget').value);
+    if (isNaN(start) || isNaN(target)) return alert('시작/목표 체중을 입력해주세요.');
+    save(KEY_GOAL, { start, target });
+    loadGoalUI();
+    updateGoalProgress();
+  }
+
+  function loadGoalUI() {
+    const g = load(KEY_GOAL);
+    if (!g) return;
+    document.getElementById('goalStart').value  = g.start;
+    document.getElementById('goalTarget').value = g.target;
+    updateGoalProgress();
+  }
+
+  function updateGoalProgress() {
+    const g = load(KEY_GOAL);
+    const records = getRecords();
+    const section = document.getElementById('goalSection');
+    if (!g) { section.style.display = 'none'; return; }
+
+    section.style.display = 'block';
+    document.getElementById('goalStartLbl').textContent  = `${g.start}kg`;
+    document.getElementById('goalTargetLbl').textContent = `${g.target}kg`;
+
+    if (records.length === 0) {
+      document.getElementById('goalPct').textContent = '0%';
+      document.getElementById('goalFill').style.width = '0%';
+      document.getElementById('goalMsg').textContent = '기록을 입력하면 진행률이 표시됩니다.';
+      return;
+    }
+
+    const current = records[records.length - 1].weight;
+    const total   = Math.abs(g.start - g.target);
+    const done    = Math.abs(g.start - current);
+    const pct     = total === 0 ? 100 : Math.min(100, Math.round(done / total * 100));
+    const diff    = (current - g.target).toFixed(1);
+    const reached = (g.target >= g.start ? current >= g.target : current <= g.target);
+
+    document.getElementById('goalPct').textContent = `${pct}%`;
+    document.getElementById('goalFill').style.width = `${pct}%`;
+    document.getElementById('goalMsg').textContent = reached
+      ? '🎉 목표 달성!'
+      : `목표까지 ${Math.abs(diff)}kg 남았습니다.`;
+  }
+
+  // ── BMI ──────────────────────────────────────────────────
+  function loadHeightUI() {
+    const h = load(KEY_HEIGHT);
+    if (h) document.getElementById('bmiHeight').value = h;
+  }
+
+  function calcBMI() {
+    const hVal = parseFloat(document.getElementById('bmiHeight').value);
+    if (isNaN(hVal) || hVal < 50) return alert('키를 올바르게 입력해주세요.');
+    save(KEY_HEIGHT, hVal);
+
+    const records = getRecords();
+    const el = document.getElementById('bmiResult');
+    if (records.length === 0) { el.innerHTML = '체중 기록이 없습니다.'; return; }
+
+    const w = records[records.length - 1].weight;
+    const h = hVal / 100;
+    const bmi = (w / (h * h)).toFixed(1);
+
+    let cat = '', color = '';
+    if (bmi < 18.5)      { cat = '저체중'; color = '#3b82f6'; }
+    else if (bmi < 23)   { cat = '정상';   color = '#22c55e'; }
+    else if (bmi < 25)   { cat = '과체중'; color = '#f59e0b'; }
+    else if (bmi < 30)   { cat = '비만';   color = '#ef4444'; }
+    else                  { cat = '고도비만'; color = '#7f1d1d'; }
+
+    el.innerHTML = `BMI: <strong style="color:${color};font-size:1.2rem">${bmi}</strong> <span style="color:${color}">(${cat})</span><br><span style="font-size:0.8rem">정상 범위: 18.5 ~ 22.9</span>`;
+  }
+
+  // ── Stats ─────────────────────────────────────────────────
+  function updateStats(records) {
+    if (records.length === 0) {
+      ['statCurrent','statWeekAvg','statMonthAvg','statMin','statMax','statTotal'].forEach(id => {
+        document.getElementById(id).textContent = '—';
+      });
+      return;
+    }
+
+    const weights = records.map(r => r.weight);
+    const now = new Date();
+
+    const last7  = records.filter(r => daysDiff(r.date, now) <= 7).map(r => r.weight);
+    const last30 = records.filter(r => daysDiff(r.date, now) <= 30).map(r => r.weight);
+
+    const avg = arr => arr.length ? (arr.reduce((a,b) => a+b, 0) / arr.length).toFixed(1) : '—';
+
+    const current = weights[weights.length - 1];
+    const first   = weights[0];
+    const diff    = (current - first).toFixed(1);
+    const diffStr = diff > 0 ? `+${diff}` : `${diff}`;
+
+    document.getElementById('statCurrent').textContent  = `${current}kg`;
+    document.getElementById('statWeekAvg').textContent  = last7.length  ? `${avg(last7)}kg`  : '—';
+    document.getElementById('statMonthAvg').textContent = last30.length ? `${avg(last30)}kg` : '—';
+    document.getElementById('statMin').textContent      = `${Math.min(...weights)}kg`;
+    document.getElementById('statMax').textContent      = `${Math.max(...weights)}kg`;
+    document.getElementById('statTotal').textContent    = `${diffStr}kg`;
+  }
+
+  function daysDiff(dateStr, now) {
+    return Math.floor((now - new Date(dateStr)) / 86400000);
+  }
+
+  // ── Chart ─────────────────────────────────────────────────
+  function setRange(days, btn) {
+    chartRange = days;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    updateChart(getRecords());
+  }
+
+  function updateChart(records) {
+    const now = new Date();
+    const filtered = chartRange === 0
+      ? records
+      : records.filter(r => daysDiff(r.date, now) <= chartRange);
+
+    const labels  = filtered.map(r => r.date.slice(5));
+    const data    = filtered.map(r => r.weight);
+    const goal    = load(KEY_GOAL);
+    const goalLine = goal ? data.map(() => goal.target) : [];
+
+    if (weightChart) weightChart.destroy();
+
+    const ctx = document.getElementById('weightChart').getContext('2d');
+    const datasets = [{
+      label: '체중 (kg)',
+      data,
+      borderColor: '#4f8ef7',
+      backgroundColor: 'rgba(79,142,247,0.08)',
+      borderWidth: 2.5,
+      pointRadius: data.length > 60 ? 0 : 4,
+      pointHoverRadius: 6,
+      tension: 0.35,
+      fill: true,
+    }];
+
+    if (goalLine.length) {
+      datasets.push({
+        label: '목표',
+        data: goalLine,
+        borderColor: '#22c55e',
+        borderDash: [6, 4],
+        borderWidth: 1.5,
+        pointRadius: 0,
+        fill: false,
+      });
+    }
+
+    weightChart = new Chart(ctx, {
+      type: 'line',
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { boxWidth: 14, font: { size: 12 } } } },
+        scales: {
+          x: { grid: { display: false }, ticks: { maxTicksLimit: 8, font: { size: 11 } } },
+          y: {
+            grid: { color: 'rgba(0,0,0,0.05)' },
+            ticks: { callback: v => `${v}kg`, font: { size: 11 } },
+            suggestedMin: data.length ? Math.min(...data) - 2 : 50,
+            suggestedMax: data.length ? Math.max(...data) + 2 : 90,
+          }
+        }
+      }
+    });
+  }
+
+  // ── Table ─────────────────────────────────────────────────
+  function updateTable(records) {
+    const wrap = document.getElementById('tableWrap');
+    if (records.length === 0) {
+      wrap.innerHTML = '<p class="empty">기록이 없습니다.</p>';
+      return;
+    }
+
+    const rows = [...records].reverse().map((r, i, arr) => {
+      const prev = arr[i + 1];
+      let changeHTML = '<span class="change-eq">—</span>';
+      if (prev) {
+        const d = (r.weight - prev.weight).toFixed(1);
+        if (d > 0) changeHTML = `<span class="change-up">▲ ${d}</span>`;
+        else if (d < 0) changeHTML = `<span class="change-down">▼ ${Math.abs(d)}</span>`;
+        else changeHTML = '<span class="change-eq">→ 0</span>';
+      }
+      return `<tr>
+        <td>${r.date}</td>
+        <td><strong>${r.weight} kg</strong></td>
+        <td>${changeHTML}</td>
+        <td style="color:var(--sub)">${r.memo || ''}</td>
+        <td><button class="del-btn" onclick="deleteRecord('${r.date}')" title="삭제">✕</button></td>
+      </tr>`;
+    }).join('');
+
+    wrap.innerHTML = `<table>
+      <thead><tr><th>날짜</th><th>체중</th><th>변화</th><th>메모</th><th></th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+  }
+
+  // ── Render ────────────────────────────────────────────────
+  function render() {
+    const records = getRecords();
+    updateStats(records);
+    updateChart(records);
+    updateTable(records);
+    updateGoalProgress();
+
+    const h = load(KEY_HEIGHT);
+    if (h) calcBMI();
+  }
+</script>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js');
+    });
+  }
+</script>
+</body>
+</html>

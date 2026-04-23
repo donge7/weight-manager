@@ -1,0 +1,15 @@
+{
+  "name": "체중관리",
+  "short_name": "체중관리",
+  "description": "날짜별 체중을 기록하고 추이를 확인하세요",
+  "start_url": "./weight-manager.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f4f6f9",
+  "theme_color": "#4f8ef7",
+  "lang": "ko",
+  "icons": [
+    { "src": "icon-192.svg", "sizes": "192x192", "type": "image/svg+xml", "purpose": "any maskable" },
+    { "src": "icon-512.svg", "sizes": "512x512", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
