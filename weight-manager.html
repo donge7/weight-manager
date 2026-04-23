@@ -271,6 +271,61 @@
 
     .empty { text-align: center; color: var(--sub); padding: 30px 0; font-size: 0.9rem; }
 
+    /* ── 감량 속도 ── */
+    .pace-box { margin-top: 12px; background: var(--bg); border-radius: 8px; padding: 12px; transition: background 0.25s; }
+    .pace-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.83rem; margin-bottom: 6px; }
+    .pace-row:last-child { margin-bottom: 0; }
+    .pace-label { color: var(--sub); }
+    .pace-value { font-weight: 600; }
+
+    /* ── 요일별 평균 ── */
+    .dow-grid { display: flex; gap: 6px; align-items: flex-end; height: 130px; margin-top: 4px; }
+    .dow-box { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+    .dow-label { font-size: 0.78rem; font-weight: 700; color: var(--sub); }
+    .dow-bar-wrap { flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center; }
+    .dow-bar { width: 65%; background: var(--primary); border-radius: 4px 4px 0 0; min-height: 3px; opacity: 0.65; transition: height 0.4s; }
+    .dow-box.today .dow-bar { opacity: 1; background: #22c55e; }
+    .dow-box.today .dow-label { color: #22c55e; }
+    .dow-val { font-size: 0.72rem; font-weight: 600; color: var(--text); }
+    .dow-count { font-size: 0.68rem; color: var(--sub); }
+
+    /* ── 아코디언 ── */
+    .accordion { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+
+    .acc-year-hd, .acc-month-hd {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.15s;
+    }
+    .acc-year-hd {
+      background: var(--bg);
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: var(--primary);
+      border-bottom: 1px solid var(--border);
+    }
+    .acc-year-hd:hover { filter: brightness(0.96); }
+
+    .acc-month-hd {
+      background: var(--card);
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text);
+      border-bottom: 1px solid var(--border);
+      padding-left: 22px;
+    }
+    .acc-month-hd:hover { background: var(--bg); }
+
+    .acc-meta { margin-left: auto; font-size: 0.78rem; color: var(--sub); font-weight: 400; }
+    .acc-arrow { font-size: 0.7rem; color: var(--sub); margin-left: 4px; }
+
+    .acc-month-body table { min-width: unset; }
+    .acc-month-body td, .acc-month-body th { padding: 7px 10px 7px 22px; }
+
     /* ── 백업 ── */
     .backup-row { display: flex; gap: 8px; margin-top: 14px; }
     .backup-row .btn { margin-top: 0; }
@@ -330,6 +385,20 @@
         <div class="lbl">총 변화</div>
       </div>
     </div>
+    <div class="stats-row" style="margin-top:10px">
+      <div class="stat-box">
+        <div class="val" id="statStreak">—</div>
+        <div class="lbl">현재 연속</div>
+      </div>
+      <div class="stat-box">
+        <div class="val" id="statBestStreak">—</div>
+        <div class="lbl">최장 연속</div>
+      </div>
+      <div class="stat-box">
+        <div class="val" id="statCount">—</div>
+        <div class="lbl">총 기록일</div>
+      </div>
+    </div>
   </div>
 
   <!-- 3. 체중 추이 -->
@@ -344,6 +413,12 @@
     <div class="chart-wrap">
       <canvas id="weightChart"></canvas>
     </div>
+  </div>
+
+  <!-- 3.5 요일별 평균 -->
+  <div class="card full">
+    <h2>요일별 평균</h2>
+    <div class="dow-grid" id="weekdayStats"></div>
   </div>
 
   <!-- 4. 목표 설정 -->
@@ -363,6 +438,7 @@
       <div class="goal-bar"><div class="goal-fill" id="goalFill"></div></div>
       <p class="no-data" id="goalMsg"></p>
     </div>
+    <div id="paceSection"></div>
   </div>
 
   <!-- 5. BMI -->
@@ -525,6 +601,69 @@
     document.getElementById('goalMsg').textContent   = reached ? '🎉 목표 달성!' : `목표까지 ${diff}kg 남았습니다.`;
   }
 
+  // ── 감량 속도 ────────────────────────────────────────────
+  function updatePace() {
+    const records = getRecords();
+    const el = document.getElementById('paceSection');
+    if (records.length < 2) { el.innerHTML = ''; return; }
+
+    const now = new Date();
+
+    // 최근 4주 우선, 부족하면 전체 기간
+    const recent = records.filter(r => daysDiff(r.date, now) <= 28);
+    const sample = recent.length >= 2 ? recent : records;
+    const periodLabel = recent.length >= 2 ? '최근 4주' : '전체 기간';
+
+    const first = sample[0];
+    const last  = sample[sample.length - 1];
+    const days  = (new Date(last.date) - new Date(first.date)) / 86400000;
+    if (days === 0) { el.innerHTML = ''; return; }
+
+    const weeklyRate = (last.weight - first.weight) / days * 7;
+    const absRate    = Math.abs(weeklyRate);
+    const isLosing   = weeklyRate < 0;
+    const paceColor  = isLosing ? '#22c55e' : weeklyRate > 0 ? '#ef4444' : 'var(--sub)';
+    const paceStr    = `${isLosing ? '▼' : weeklyRate > 0 ? '▲' : '→'} ${absRate.toFixed(2)}kg/주`;
+
+    const g       = load(KEY_GOAL);
+    const current = last.weight;
+    let goalHTML  = '';
+
+    if (g && !isNaN(g.target)) {
+      const remaining  = current - g.target;
+      const needToLose = g.target < current;
+      const onTrack    = (needToLose && isLosing) || (!needToLose && weeklyRate > 0);
+
+      if (Math.abs(remaining) < 0.05) {
+        goalHTML = `<div class="pace-row">
+          <span class="pace-label">목표까지</span>
+          <span class="pace-value" style="color:#22c55e">🎉 달성!</span>
+        </div>`;
+      } else if (onTrack && absRate > 0) {
+        const weeks  = Math.abs(remaining / weeklyRate);
+        const eta    = new Date(now.getTime() + weeks * 7 * 86400000);
+        const etaStr = `${eta.getFullYear()}.${String(eta.getMonth()+1).padStart(2,'0')}.${String(eta.getDate()).padStart(2,'0')}`;
+        goalHTML = `<div class="pace-row">
+          <span class="pace-label">목표까지</span>
+          <span class="pace-value" style="color:var(--primary)">약 ${Math.ceil(weeks)}주 (${etaStr} 예상)</span>
+        </div>`;
+      } else {
+        goalHTML = `<div class="pace-row">
+          <span class="pace-label">목표까지</span>
+          <span class="pace-value" style="color:#ef4444">현재 페이스로 달성 어려움</span>
+        </div>`;
+      }
+    }
+
+    el.innerHTML = `<div class="pace-box">
+      <div class="pace-row">
+        <span class="pace-label">${periodLabel} 감량 속도</span>
+        <span class="pace-value" style="color:${paceColor}">${paceStr}</span>
+      </div>
+      ${goalHTML}
+    </div>`;
+  }
+
   // ── BMI ──────────────────────────────────────────────────
   function loadHeightUI() {
     const h = load(KEY_HEIGHT);
@@ -555,28 +694,86 @@
   }
 
   // ── Stats ─────────────────────────────────────────────────
+  function calcStreaks(records) {
+    if (records.length === 0) return { best: 0, current: 0 };
+
+    // 최장 연속 기록일 계산
+    let best = 1, cur = 1;
+    for (let i = 1; i < records.length; i++) {
+      const diff = (new Date(records[i].date) - new Date(records[i-1].date)) / 86400000;
+      cur = diff === 1 ? cur + 1 : 1;
+      if (cur > best) best = cur;
+    }
+
+    // 현재 연속 기록일 (오늘 or 어제부터 역산)
+    const today     = new Date().toISOString().slice(0, 10);
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    const lastDate  = records[records.length - 1].date;
+
+    let streak = 0;
+    if (lastDate === today || lastDate === yesterday) {
+      streak = 1;
+      for (let i = records.length - 2; i >= 0; i--) {
+        const diff = (new Date(records[i+1].date) - new Date(records[i].date)) / 86400000;
+        if (diff === 1) streak++;
+        else break;
+      }
+    }
+
+    return { best, current: streak };
+  }
+
+  function setVal(id, text, color) {
+    const el = document.getElementById(id);
+    el.textContent = text;
+    el.style.color = color;
+  }
+
   function updateStats(records) {
+    const ids = ['statCurrent','statWeekAvg','statMonthAvg','statMin','statMax','statTotal','statStreak','statBestStreak','statCount'];
     if (records.length === 0) {
-      ['statCurrent','statWeekAvg','statMonthAvg','statMin','statMax','statTotal']
-        .forEach(id => { document.getElementById(id).textContent = '—'; });
+      ids.forEach(id => { document.getElementById(id).textContent = '—'; document.getElementById(id).style.color = ''; });
       return;
     }
+
+    const C = {
+      primary : '#4f8ef7',
+      green   : '#22c55e',
+      red     : '#ef4444',
+      amber   : '#f59e0b',
+      gold    : '#eab308',
+      sub     : 'var(--sub)',
+    };
 
     const weights = records.map(r => r.weight);
     const now     = new Date();
     const last7   = records.filter(r => daysDiff(r.date, now) <= 7).map(r => r.weight);
     const last30  = records.filter(r => daysDiff(r.date, now) <= 30).map(r => r.weight);
-    const avg     = arr => arr.length ? (arr.reduce((a,b) => a+b,0) / arr.length).toFixed(1) : '—';
+    const avg     = arr => arr.length ? (arr.reduce((a,b) => a+b,0) / arr.length).toFixed(1) : null;
 
     const current = weights[weights.length - 1];
-    const diff    = (current - weights[0]).toFixed(1);
+    const diff    = parseFloat((current - weights[0]).toFixed(1));
+    const streaks = calcStreaks(records);
 
-    document.getElementById('statCurrent').textContent  = `${current}kg`;
-    document.getElementById('statWeekAvg').textContent  = last7.length  ? `${avg(last7)}kg`  : '—';
-    document.getElementById('statMonthAvg').textContent = last30.length ? `${avg(last30)}kg` : '—';
-    document.getElementById('statMin').textContent      = `${Math.min(...weights)}kg`;
-    document.getElementById('statMax').textContent      = `${Math.max(...weights)}kg`;
-    document.getElementById('statTotal').textContent    = `${diff > 0 ? '+' : ''}${diff}kg`;
+    // 행 1: 체중 계열 — 파란색
+    setVal('statCurrent',  `${current}kg`,                                  C.primary);
+    setVal('statWeekAvg',  last7.length  ? `${avg(last7)}kg`  : '—',        C.primary);
+    setVal('statMonthAvg', last30.length ? `${avg(last30)}kg` : '—',        C.primary);
+
+    // 행 2: 최저(초록) / 최고(빨강) / 총변화(감소=초록, 증가=빨강)
+    setVal('statMin',   `${Math.min(...weights)}kg`,                         C.green);
+    setVal('statMax',   `${Math.max(...weights)}kg`,                         C.red);
+    setVal('statTotal', `${diff > 0 ? '+' : ''}${diff}kg`,
+           diff < 0 ? C.green : diff > 0 ? C.red : C.sub);
+
+    // 행 3: 현재 연속(길이별 색상) / 최장 연속(금색) / 총 기록(파랑)
+    const streakColor = streaks.current === 0 ? C.sub
+                      : streaks.current < 7   ? C.amber
+                      : streaks.current < 30  ? C.primary
+                      :                         C.green;
+    setVal('statStreak',      `${streaks.current}일`, streakColor);
+    setVal('statBestStreak',  `${streaks.best}일`,    C.gold);
+    setVal('statCount',       `${records.length}일`,  C.primary);
   }
 
   function daysDiff(dateStr, now) {
@@ -659,10 +856,49 @@
     });
   }
 
+  // ── 요일별 평균 ──────────────────────────────────────────
+  function updateWeekdayStats(records) {
+    const el = document.getElementById('weekdayStats');
+    if (records.length === 0) {
+      el.innerHTML = '<p class="empty" style="width:100%">기록이 없습니다.</p>';
+      return;
+    }
+    const labels  = ['일', '월', '화', '수', '목', '금', '토'];
+    const buckets = Array.from({length: 7}, () => []);
+    for (const r of records) {
+      buckets[new Date(r.date).getDay()].push(r.weight);
+    }
+    const avgs    = buckets.map(b => b.length ? b.reduce((a,c) => a+c, 0) / b.length : null);
+    const valid   = avgs.filter(v => v !== null);
+    const minAvg  = valid.length ? Math.min(...valid) : 0;
+    const range   = valid.length ? (Math.max(...valid) - minAvg) || 1 : 1;
+    const todayDow = new Date().getDay();
+
+    el.innerHTML = labels.map((d, i) => {
+      const avg = avgs[i];
+      const pct = avg !== null ? Math.round((avg - minAvg) / range * 75 + 15) : 0;
+      return `<div class="dow-box${i === todayDow ? ' today' : ''}">
+        <div class="dow-label">${d}</div>
+        <div class="dow-bar-wrap"><div class="dow-bar" style="height:${pct}%"></div></div>
+        <div class="dow-val">${avg !== null ? avg.toFixed(1) : '—'}</div>
+        <div class="dow-count">${buckets[i].length}회</div>
+      </div>`;
+    }).join('');
+  }
+
   // ── Table ─────────────────────────────────────────────────
   function toggleMemo(date) {
     const el = document.getElementById(`memo-${date}`);
     if (el) el.style.display = el.style.display === 'none' ? 'table-row' : 'none';
+  }
+
+  function toggleAcc(id) {
+    const body  = document.getElementById(id);
+    const arrow = document.getElementById('arr-' + id);
+    if (!body) return;
+    const opening = body.style.display === 'none';
+    body.style.display = opening ? '' : 'none';
+    if (arrow) arrow.textContent = opening ? '▲' : '▼';
   }
 
   function updateTable(records) {
@@ -674,54 +910,84 @@
 
     const reversed = [...records].reverse();
 
-    // 연도별 그룹핑
+    // 연도 → 월 그룹핑
     const years = [];
     const byYear = {};
     for (const r of reversed) {
       const y = r.date.slice(0, 4);
-      if (!byYear[y]) { byYear[y] = []; years.push(y); }
-      byYear[y].push(r);
+      const m = r.date.slice(0, 7);
+      if (!byYear[y]) { byYear[y] = { months: [], byMonth: {} }; years.push(y); }
+      if (!byYear[y].byMonth[m]) { byYear[y].byMonth[m] = []; byYear[y].months.push(m); }
+      byYear[y].byMonth[m].push(r);
     }
 
-    let tbody = '';
-    for (const year of years) {
-      tbody += `<tr class="year-row"><td colspan="4">${year}년</td></tr>`;
-      const yearRecs = byYear[year];
-      for (let i = 0; i < yearRecs.length; i++) {
-        const r    = yearRecs[i];
-        // 전날 변화: 전체 reversed 배열에서 이전 항목 참조
-        const idx  = reversed.findIndex(x => x.date === r.date);
-        const prev = reversed[idx + 1];
-        let changeHTML = '<span class="change-eq">—</span>';
-        if (prev) {
-          const d = (r.weight - prev.weight).toFixed(1);
-          if      (d > 0) changeHTML = `<span class="change-up">▲ ${d}</span>`;
-          else if (d < 0) changeHTML = `<span class="change-down">▼ ${Math.abs(d)}</span>`;
-          else             changeHTML = '<span class="change-eq">→</span>';
-        }
+    let html = '<div class="accordion">';
 
-        const mmdd    = r.date.slice(5).replace('-', '/');
-        const hasMemo = r.memo && r.memo.trim();
+    years.forEach((year, yi) => {
+      const ydata      = byYear[year];
+      const totalCount = ydata.months.reduce((s, m) => s + ydata.byMonth[m].length, 0);
+      const isLatestY  = yi === 0;
 
-        tbody += `<tr class="data-row${hasMemo ? ' has-memo' : ''}" onclick="${hasMemo ? `toggleMemo('${r.date}')` : ''}">
-          <td>${mmdd}</td>
-          <td><strong>${r.weight}</strong></td>
-          <td>${changeHTML}</td>
-          <td><button class="del-btn" onclick="event.stopPropagation();deleteRecord('${r.date}')" title="삭제">✕</button></td>
-        </tr>`;
+      html += `
+        <div class="acc-year-hd" onclick="toggleAcc('y-${year}')">
+          <span>${year}년</span>
+          <span class="acc-meta">${totalCount}건</span>
+          <span class="acc-arrow" id="arr-y-${year}">${isLatestY ? '▲' : '▼'}</span>
+        </div>
+        <div id="y-${year}" style="${isLatestY ? '' : 'display:none'}">`;
 
-        if (hasMemo) {
-          tbody += `<tr class="memo-row" id="memo-${r.date}" style="display:none">
-            <td colspan="4">💬 ${r.memo}</td>
+      ydata.months.forEach((month, mi) => {
+        const mRecs      = ydata.byMonth[month];
+        const isLatestM  = isLatestY && mi === 0;
+        const monthLabel = parseInt(month.slice(5)) + '월';
+        const avg        = (mRecs.reduce((s, r) => s + r.weight, 0) / mRecs.length).toFixed(1);
+
+        html += `
+          <div class="acc-month-hd" onclick="toggleAcc('m-${month}')">
+            <span>${monthLabel}</span>
+            <span class="acc-meta">${mRecs.length}건 · 평균 ${avg}kg</span>
+            <span class="acc-arrow" id="arr-m-${month}">${isLatestM ? '▲' : '▼'}</span>
+          </div>
+          <div id="m-${month}" style="${isLatestM ? '' : 'display:none'}">
+            <table>
+              <thead><tr><th>일</th><th>체중 (kg)</th><th>변화</th><th></th></tr></thead>
+              <tbody>`;
+
+        for (const r of mRecs) {
+          const idx  = reversed.findIndex(x => x.date === r.date);
+          const prev = reversed[idx + 1];
+          let changeHTML = '<span class="change-eq">—</span>';
+          if (prev) {
+            const d = (r.weight - prev.weight).toFixed(1);
+            if      (d > 0) changeHTML = `<span class="change-up">▲ ${d}</span>`;
+            else if (d < 0) changeHTML = `<span class="change-down">▼ ${Math.abs(d)}</span>`;
+            else             changeHTML = '<span class="change-eq">→</span>';
+          }
+          const dd      = parseInt(r.date.slice(8)) + '일';
+          const hasMemo = r.memo && r.memo.trim();
+
+          html += `<tr class="data-row${hasMemo ? ' has-memo' : ''}" onclick="${hasMemo ? `toggleMemo('${r.date}')` : ''}">
+            <td>${dd}</td>
+            <td><strong>${r.weight}</strong></td>
+            <td>${changeHTML}</td>
+            <td><button class="del-btn" onclick="event.stopPropagation();deleteRecord('${r.date}')" title="삭제">✕</button></td>
           </tr>`;
-        }
-      }
-    }
 
-    wrap.innerHTML = `<table>
-      <thead><tr><th>날짜</th><th>체중 (kg)</th><th>변화</th><th></th></tr></thead>
-      <tbody>${tbody}</tbody>
-    </table>`;
+          if (hasMemo) {
+            html += `<tr class="memo-row" id="memo-${r.date}" style="display:none">
+              <td colspan="4">💬 ${r.memo}</td>
+            </tr>`;
+          }
+        }
+
+        html += `</tbody></table></div>`;
+      });
+
+      html += `</div>`;
+    });
+
+    html += '</div>';
+    wrap.innerHTML = html;
   }
 
   // ── Backup / Restore ──────────────────────────────────────
@@ -790,8 +1056,10 @@
     const records = getRecords();
     updateStats(records);
     updateChart(records);
+    updateWeekdayStats(records);
     updateTable(records);
     updateGoalProgress();
+    updatePace();
     const h = load(KEY_HEIGHT);
     if (h) calcBMI();
   }
