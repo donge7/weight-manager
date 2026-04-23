@@ -201,6 +201,14 @@
     .goal-fill { height: 100%; background: var(--primary); border-radius: 99px; transition: width 0.5s; }
 
     .no-data { color: var(--sub); font-size: 0.85rem; margin-top: 8px; }
+
+    /* Backup */
+    .backup-row { display: flex; gap: 8px; margin-top: 14px; }
+    .backup-row .btn { margin-top: 0; }
+    .btn-secondary { background: #e2e8f0; color: var(--text); }
+    .btn-secondary:hover { background: #cbd5e1; }
+    .restore-info { font-size: 0.8rem; color: var(--sub); margin-top: 8px; }
+    #fileInput { display: none; }
   </style>
 </head>
 <body>
@@ -294,6 +302,18 @@
     <div class="chart-wrap">
       <canvas id="weightChart"></canvas>
     </div>
+  </div>
+
+  <!-- 백업/복원 -->
+  <div class="card full">
+    <h2>백업 / 복원</h2>
+    <p class="restore-info">모든 기록·목표·키 데이터를 JSON 파일로 내보내거나 불러올 수 있습니다.</p>
+    <div class="backup-row">
+      <button class="btn btn-primary" onclick="exportBackup()">백업 내보내기 (JSON)</button>
+      <button class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">백업 불러오기</button>
+    </div>
+    <input type="file" id="fileInput" accept=".json" onchange="importBackup(event)" />
+    <p class="restore-info" id="restoreMsg"></p>
   </div>
 
   <!-- 기록 목록 -->
@@ -582,6 +602,71 @@
       <thead><tr><th>날짜</th><th>체중</th><th>변화</th><th>메모</th><th></th></tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
+  }
+
+  // ── Backup / Restore ──────────────────────────────────────
+  function exportBackup() {
+    const backup = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      records: load(KEY_RECORDS) || [],
+      goal:    load(KEY_GOAL),
+      height:  load(KEY_HEIGHT),
+    };
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    const date = new Date().toISOString().slice(0, 10);
+    a.href     = url;
+    a.download = `체중관리_백업_${date}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function importBackup(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (!Array.isArray(data.records)) throw new Error('형식 오류');
+
+        const msg = document.getElementById('restoreMsg');
+        const existing = getRecords();
+
+        if (existing.length > 0) {
+          if (!confirm(`기존 기록 ${existing.length}개가 있습니다.\n백업 파일과 병합할까요?\n(취소 시 기존 데이터를 덮어씁니다)`)) {
+            // 덮어쓰기
+            saveRecords(data.records);
+          } else {
+            // 병합: 날짜 기준 중복 제거, 백업 우선
+            const merged = [...existing];
+            data.records.forEach(r => {
+              const idx = merged.findIndex(m => m.date === r.date);
+              if (idx >= 0) merged[idx] = r;
+              else merged.push(r);
+            });
+            merged.sort((a, b) => a.date.localeCompare(b.date));
+            saveRecords(merged);
+          }
+        } else {
+          saveRecords(data.records);
+        }
+
+        if (data.goal)   save(KEY_GOAL, data.goal);
+        if (data.height) save(KEY_HEIGHT, data.height);
+
+        msg.style.color = '#22c55e';
+        msg.textContent = `복원 완료 — 기록 ${getRecords().length}개 불러왔습니다.`;
+        render();
+      } catch {
+        document.getElementById('restoreMsg').style.color = '#ef4444';
+        document.getElementById('restoreMsg').textContent = '파일 형식이 올바르지 않습니다.';
+      }
+      e.target.value = '';
+    };
+    reader.readAsText(file);
   }
 
   // ── Render ────────────────────────────────────────────────
