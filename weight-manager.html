@@ -223,11 +223,36 @@
 
     /* ── 테이블 ── */
     #tableWrap { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; font-size: 0.88rem; min-width: 320px; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.88rem; min-width: 260px; }
     th { text-align: left; padding: 8px 10px; color: var(--sub); font-weight: 600; border-bottom: 2px solid var(--border); }
     td { padding: 8px 10px; border-bottom: 1px solid var(--border); }
     tr:last-child td { border-bottom: none; }
-    tr:hover td { background: var(--bg); }
+
+    .year-row td {
+      background: var(--bg);
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 0.85rem;
+      padding: 10px 10px 6px;
+      border-bottom: 1px solid var(--border);
+      letter-spacing: 0.03em;
+    }
+
+    .data-row.has-memo { cursor: pointer; }
+    .data-row.has-memo td:first-child::after {
+      content: ' 💬';
+      font-size: 0.75rem;
+      opacity: 0.5;
+    }
+    .data-row:hover td { background: var(--bg); }
+
+    .memo-row td {
+      background: var(--bg);
+      color: var(--sub);
+      font-size: 0.82rem;
+      padding: 6px 14px 10px;
+      border-bottom: 1px solid var(--border);
+    }
 
     .change-up   { color: #ef4444; font-weight: 600; }
     .change-down { color: #22c55e; font-weight: 600; }
@@ -635,6 +660,11 @@
   }
 
   // ── Table ─────────────────────────────────────────────────
+  function toggleMemo(date) {
+    const el = document.getElementById(`memo-${date}`);
+    if (el) el.style.display = el.style.display === 'none' ? 'table-row' : 'none';
+  }
+
   function updateTable(records) {
     const wrap = document.getElementById('tableWrap');
     if (records.length === 0) {
@@ -642,27 +672,55 @@
       return;
     }
 
-    const rows = [...records].reverse().map((r, i, arr) => {
-      const prev = arr[i + 1];
-      let changeHTML = '<span class="change-eq">—</span>';
-      if (prev) {
-        const d = (r.weight - prev.weight).toFixed(1);
-        if      (d > 0) changeHTML = `<span class="change-up">▲ ${d}</span>`;
-        else if (d < 0) changeHTML = `<span class="change-down">▼ ${Math.abs(d)}</span>`;
-        else             changeHTML = '<span class="change-eq">→ 0</span>';
+    const reversed = [...records].reverse();
+
+    // 연도별 그룹핑
+    const years = [];
+    const byYear = {};
+    for (const r of reversed) {
+      const y = r.date.slice(0, 4);
+      if (!byYear[y]) { byYear[y] = []; years.push(y); }
+      byYear[y].push(r);
+    }
+
+    let tbody = '';
+    for (const year of years) {
+      tbody += `<tr class="year-row"><td colspan="4">${year}년</td></tr>`;
+      const yearRecs = byYear[year];
+      for (let i = 0; i < yearRecs.length; i++) {
+        const r    = yearRecs[i];
+        // 전날 변화: 전체 reversed 배열에서 이전 항목 참조
+        const idx  = reversed.findIndex(x => x.date === r.date);
+        const prev = reversed[idx + 1];
+        let changeHTML = '<span class="change-eq">—</span>';
+        if (prev) {
+          const d = (r.weight - prev.weight).toFixed(1);
+          if      (d > 0) changeHTML = `<span class="change-up">▲ ${d}</span>`;
+          else if (d < 0) changeHTML = `<span class="change-down">▼ ${Math.abs(d)}</span>`;
+          else             changeHTML = '<span class="change-eq">→</span>';
+        }
+
+        const mmdd    = r.date.slice(5).replace('-', '/');
+        const hasMemo = r.memo && r.memo.trim();
+
+        tbody += `<tr class="data-row${hasMemo ? ' has-memo' : ''}" onclick="${hasMemo ? `toggleMemo('${r.date}')` : ''}">
+          <td>${mmdd}</td>
+          <td><strong>${r.weight}</strong></td>
+          <td>${changeHTML}</td>
+          <td><button class="del-btn" onclick="event.stopPropagation();deleteRecord('${r.date}')" title="삭제">✕</button></td>
+        </tr>`;
+
+        if (hasMemo) {
+          tbody += `<tr class="memo-row" id="memo-${r.date}" style="display:none">
+            <td colspan="4">💬 ${r.memo}</td>
+          </tr>`;
+        }
       }
-      return `<tr>
-        <td>${r.date}</td>
-        <td><strong>${r.weight} kg</strong></td>
-        <td>${changeHTML}</td>
-        <td style="color:var(--sub)">${r.memo || ''}</td>
-        <td><button class="del-btn" onclick="deleteRecord('${r.date}')" title="삭제">✕</button></td>
-      </tr>`;
-    }).join('');
+    }
 
     wrap.innerHTML = `<table>
-      <thead><tr><th>날짜</th><th>체중</th><th>변화</th><th>메모</th><th></th></tr></thead>
-      <tbody>${rows}</tbody>
+      <thead><tr><th>날짜</th><th>체중 (kg)</th><th>변화</th><th></th></tr></thead>
+      <tbody>${tbody}</tbody>
     </table>`;
   }
 
