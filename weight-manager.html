@@ -80,18 +80,6 @@
       color: var(--primary);
     }
 
-    .header-right {
-      position: absolute; right: 0;
-      display: flex; align-items: center; gap: 8px;
-    }
-
-    .db-badge {
-      font-size: 0.7rem; font-weight: 700;
-      background: #6366f1; color: #fff;
-      padding: 3px 8px; border-radius: 20px;
-      letter-spacing: 0.04em;
-    }
-
     .dark-toggle {
       background: var(--card);
       border: 1px solid var(--border);
@@ -415,10 +403,7 @@
 
 <div class="header">
   <h1>⚖️ 체중관리</h1>
-  <div class="header-right">
-    <span class="db-badge">SQLite</span>
-    <button class="dark-toggle" onclick="toggleDark()" id="darkBtn">🌙</button>
-  </div>
+  <button class="dark-toggle" onclick="toggleDark()" id="darkBtn" style="position:absolute;right:0">🌙</button>
 </div>
 
 <div class="grid">
@@ -540,20 +525,25 @@
 
   <!-- 7. 백업/복원 -->
   <div class="card full">
-    <h2>백업 / 복원</h2>
-    <p class="restore-info">모든 기록·목표·키 데이터를 내보내거나 불러올 수 있습니다.<br>⚠️ 브라우저 <strong>사이트 데이터 삭제</strong> 시 앱 데이터도 함께 삭제됩니다. 정기 백업을 권장합니다.</p>
-    <div class="last-backup-row" id="lastBackupRow">
-      <span class="lb-label">마지막 백업</span>
-      <span class="lb-val" id="lastBackupVal">—</span>
+    <h2 style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:0" onclick="toggleBackupCard()">
+      <span>백업 / 복원</span>
+      <span id="backupArrow" style="font-size:0.75rem;color:var(--sub);font-weight:400">▼</span>
+    </h2>
+    <div id="backupBody" style="display:none">
+      <p class="restore-info" style="margin-top:14px">모든 기록·목표·키 데이터를 내보내거나 불러올 수 있습니다.<br>⚠️ 브라우저 <strong>사이트 데이터 삭제</strong> 시 앱 데이터도 함께 삭제됩니다. 정기 백업을 권장합니다.</p>
+      <div class="last-backup-row" id="lastBackupRow">
+        <span class="lb-label">마지막 백업</span>
+        <span class="lb-val" id="lastBackupVal">—</span>
+      </div>
+      <div class="backup-row">
+        <button class="btn btn-primary" onclick="exportJSON()">JSON 백업</button>
+        <button class="btn btn-violet" onclick="exportSQLite()">SQLite .db 저장</button>
+        <button class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">백업 불러오기 (JSON)</button>
+      </div>
+      <input type="file" id="fileInput" accept=".json" onchange="importBackup(event)" />
+      <p class="restore-info" id="restoreMsg"></p>
+      <div class="db-info" id="dbInfo"></div>
     </div>
-    <div class="backup-row">
-      <button class="btn btn-primary" onclick="exportJSON()">JSON 백업</button>
-      <button class="btn btn-violet" onclick="exportSQLite()">SQLite .db 저장</button>
-      <button class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">백업 불러오기 (JSON)</button>
-    </div>
-    <input type="file" id="fileInput" accept=".json" onchange="importBackup(event)" />
-    <p class="restore-info" id="restoreMsg"></p>
-    <div class="db-info" id="dbInfo"></div>
   </div>
 
 </div>
@@ -1283,6 +1273,15 @@
 
     html += '</div>';
     wrap.innerHTML = html;
+  }
+
+  // ── 백업 카드 펼침/접힘 ───────────────────────────────────
+  function toggleBackupCard() {
+    const body  = document.getElementById('backupBody');
+    const arrow = document.getElementById('backupArrow');
+    const isOpen = body.style.display !== 'none';
+    body.style.display  = isOpen ? 'none' : '';
+    arrow.textContent   = isOpen ? '▼' : '▲';
   }
 
   // ── 백업 / 복원 ──────────────────────────────────────────
