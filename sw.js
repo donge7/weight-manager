@@ -1,4 +1,4 @@
-const CACHE = 'wm-v8';
+const CACHE = 'wm-v9';
 const ASSETS = [
   './weight-manager.html',
   './manifest.json',
