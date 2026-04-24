@@ -12,6 +12,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon-192.svg" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -50,6 +51,20 @@
       transition: background 0.25s, color 0.25s;
     }
 
+    /* ── 로딩 오버레이 ── */
+    #loadingOverlay {
+      position: fixed; inset: 0; background: var(--bg);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 16px; z-index: 9999; transition: opacity 0.3s;
+    }
+    #loadingOverlay .spinner {
+      width: 40px; height: 40px;
+      border: 4px solid var(--border); border-top-color: var(--primary);
+      border-radius: 50%; animation: spin 0.8s linear infinite;
+    }
+    #loadingOverlay p { color: var(--sub); font-size: 0.9rem; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
     /* ── 헤더 ── */
     .header {
       display: flex;
@@ -65,9 +80,19 @@
       color: var(--primary);
     }
 
+    .header-right {
+      position: absolute; right: 0;
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    .db-badge {
+      font-size: 0.7rem; font-weight: 700;
+      background: #6366f1; color: #fff;
+      padding: 3px 8px; border-radius: 20px;
+      letter-spacing: 0.04em;
+    }
+
     .dark-toggle {
-      position: absolute;
-      right: 0;
       background: var(--card);
       border: 1px solid var(--border);
       border-radius: 20px;
@@ -159,6 +184,8 @@
     .btn-danger:hover   { background: #dc2626; }
     .btn-secondary { background: var(--border); color: var(--text); }
     .btn-secondary:hover { filter: brightness(0.92); }
+    .btn-violet { background: #6366f1; color: #fff; }
+    .btn-violet:hover { background: #4f46e5; }
 
     /* ── 통계 ── */
     .stats-row {
@@ -227,16 +254,6 @@
     th { text-align: left; padding: 8px 10px; color: var(--sub); font-weight: 600; border-bottom: 2px solid var(--border); }
     td { padding: 8px 10px; border-bottom: 1px solid var(--border); }
     tr:last-child td { border-bottom: none; }
-
-    .year-row td {
-      background: var(--bg);
-      color: var(--primary);
-      font-weight: 700;
-      font-size: 0.85rem;
-      padding: 10px 10px 6px;
-      border-bottom: 1px solid var(--border);
-      letter-spacing: 0.03em;
-    }
 
     .data-row.has-memo { cursor: pointer; }
     .data-row.has-memo td:first-child::after {
@@ -327,17 +344,81 @@
     .acc-month-body td, .acc-month-body th { padding: 7px 10px 7px 22px; }
 
     /* ── 백업 ── */
-    .backup-row { display: flex; gap: 8px; margin-top: 14px; }
-    .backup-row .btn { margin-top: 0; }
+    .backup-row { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+    .backup-row .btn { margin-top: 0; flex: 1; min-width: 120px; }
     .restore-info { font-size: 0.8rem; color: var(--sub); margin-top: 8px; }
     #fileInput { display: none; }
+
+    /* ── DB 정보 ── */
+    .db-info { background: var(--bg); border-radius: 8px; padding: 10px 14px; margin-top: 14px; font-size: 0.82rem; color: var(--sub); }
+    .db-info span { color: var(--primary); font-weight: 600; }
+
+    /* ── 백업 알림 배너 ── */
+    .bk-banner {
+      max-width: 900px; margin: 0 auto 16px;
+      border-radius: 10px; padding: 13px 16px;
+      display: flex; align-items: center; gap: 12px;
+      font-size: 0.87rem; animation: slideDown 0.25s ease;
+    }
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .bk-banner.warn {
+      background: #fef3c7; border: 1px solid #f59e0b; color: #92400e;
+    }
+    .bk-banner.danger {
+      background: #fef2f2; border: 1px solid #fca5a5; color: #991b1b;
+    }
+    .bk-banner.ok {
+      background: #f0fdf4; border: 1px solid #86efac; color: #166534;
+    }
+    body.dark .bk-banner.warn   { background: #451a03; border-color: #b45309; color: #fcd34d; }
+    body.dark .bk-banner.danger { background: #450a0a; border-color: #b91c1c; color: #fca5a5; }
+    body.dark .bk-banner.ok     { background: #052e16; border-color: #16a34a; color: #86efac; }
+    .bk-banner .bk-icon  { font-size: 1.3rem; flex-shrink: 0; }
+    .bk-banner .bk-text  { flex: 1; line-height: 1.5; }
+    .bk-banner .bk-text strong { display: block; margin-bottom: 2px; }
+    .bk-banner .bk-btn {
+      padding: 6px 14px; border: none; border-radius: 6px;
+      font-size: 0.82rem; font-weight: 600; cursor: pointer; white-space: nowrap;
+      background: #f59e0b; color: #fff;
+    }
+    .bk-banner.danger .bk-btn { background: #ef4444; }
+    .bk-banner.ok     .bk-btn { background: #22c55e; }
+    .bk-banner .bk-close {
+      background: none; border: none; cursor: pointer;
+      font-size: 1rem; opacity: 0.5; padding: 4px; flex-shrink: 0;
+    }
+    .bk-banner .bk-close:hover { opacity: 1; }
+
+    /* ── 마지막 백업 상태 ── */
+    .last-backup-row {
+      display: flex; align-items: center; justify-content: space-between;
+      background: var(--bg); border-radius: 8px; padding: 10px 14px;
+      margin-top: 14px; font-size: 0.82rem;
+    }
+    .last-backup-row .lb-label { color: var(--sub); }
+    .last-backup-row .lb-val   { font-weight: 600; }
   </style>
 </head>
 <body>
 
+<!-- 백업 알림 배너 -->
+<div id="backupBanner"></div>
+
+<!-- 로딩 오버레이 -->
+<div id="loadingOverlay">
+  <div class="spinner"></div>
+  <p>SQLite 데이터베이스 초기화 중...</p>
+</div>
+
 <div class="header">
   <h1>⚖️ 체중관리</h1>
-  <button class="dark-toggle" onclick="toggleDark()" id="darkBtn">🌙</button>
+  <div class="header-right">
+    <span class="db-badge">SQLite</span>
+    <button class="dark-toggle" onclick="toggleDark()" id="darkBtn">🌙</button>
+  </div>
 </div>
 
 <div class="grid">
@@ -460,56 +541,278 @@
   <!-- 7. 백업/복원 -->
   <div class="card full">
     <h2>백업 / 복원</h2>
-    <p class="restore-info">모든 기록·목표·키 데이터를 JSON 파일로 내보내거나 불러올 수 있습니다.</p>
+    <p class="restore-info">모든 기록·목표·키 데이터를 내보내거나 불러올 수 있습니다.<br>⚠️ 브라우저 <strong>사이트 데이터 삭제</strong> 시 앱 데이터도 함께 삭제됩니다. 정기 백업을 권장합니다.</p>
+    <div class="last-backup-row" id="lastBackupRow">
+      <span class="lb-label">마지막 백업</span>
+      <span class="lb-val" id="lastBackupVal">—</span>
+    </div>
     <div class="backup-row">
-      <button class="btn btn-primary" onclick="exportBackup()">백업 내보내기 (JSON)</button>
-      <button class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">백업 불러오기</button>
+      <button class="btn btn-primary" onclick="exportJSON()">JSON 백업</button>
+      <button class="btn btn-violet" onclick="exportSQLite()">SQLite .db 저장</button>
+      <button class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">백업 불러오기 (JSON)</button>
     </div>
     <input type="file" id="fileInput" accept=".json" onchange="importBackup(event)" />
     <p class="restore-info" id="restoreMsg"></p>
+    <div class="db-info" id="dbInfo"></div>
   </div>
 
 </div>
 
 <script>
-  const KEY_RECORDS = 'wm_records';
-  const KEY_GOAL    = 'wm_goal';
-  const KEY_HEIGHT  = 'wm_height';
-  const KEY_DARK    = 'wm_dark';
+  // ── 상수 ────────────────────────────────────────────────
+  const KEY_DARK        = 'wm_dark';
+  const DB_STORE        = 'wm_sqlitedb';
+  const KEY_LAST_BACKUP = 'wm_last_backup';
+  const BACKUP_WARN_DAYS   = 7;   // 7일 경과 → 주의
+  const BACKUP_DANGER_DAYS = 14;  // 14일 경과 → 위험
 
-  function load(key) {
-    try { return JSON.parse(localStorage.getItem(key)) || null; } catch { return null; }
+  let db = null;
+
+  // ── SQLite 초기화 ────────────────────────────────────────
+  async function initDB() {
+    const SQL = await initSqlJs({
+      locateFile: f => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/${f}`
+    });
+
+    const saved = localStorage.getItem(DB_STORE);
+    if (saved) {
+      try {
+        const bin = atob(saved);
+        const arr = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+        db = new SQL.Database(arr);
+      } catch {
+        db = new SQL.Database();
+      }
+    } else {
+      db = new SQL.Database();
+    }
+
+    db.run(`
+      CREATE TABLE IF NOT EXISTS records (
+        date   TEXT PRIMARY KEY,
+        weight REAL NOT NULL,
+        memo   TEXT DEFAULT ''
+      );
+      CREATE TABLE IF NOT EXISTS settings (
+        key   TEXT PRIMARY KEY,
+        value TEXT
+      );
+    `);
+
+    migrateOldData();
   }
-  function save(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
-  function getRecords() { return load(KEY_RECORDS) || []; }
-  function saveRecords(r) { save(KEY_RECORDS, r); }
+
+  // localStorage → SQLite 마이그레이션 (구버전 데이터 자동 이전)
+  function migrateOldData() {
+    let migrated = false;
+    const oldRecords = localStorage.getItem('wm_records');
+    const oldGoal    = localStorage.getItem('wm_goal');
+    const oldHeight  = localStorage.getItem('wm_height');
+
+    if (oldRecords) {
+      try {
+        JSON.parse(oldRecords).forEach(r => {
+          db.run(
+            'INSERT OR IGNORE INTO records (date, weight, memo) VALUES (?, ?, ?)',
+            [r.date, r.weight, r.memo || '']
+          );
+        });
+      } catch {}
+      localStorage.removeItem('wm_records');
+      migrated = true;
+    }
+    if (oldGoal) {
+      db.run('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', ['goal', oldGoal]);
+      localStorage.removeItem('wm_goal');
+      migrated = true;
+    }
+    if (oldHeight) {
+      db.run('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', ['height', oldHeight]);
+      localStorage.removeItem('wm_height');
+      migrated = true;
+    }
+    if (migrated) {
+      saveDB();
+      console.log('[마이그레이션] 기존 localStorage 데이터를 SQLite로 이전 완료');
+    }
+  }
+
+  // SQLite DB → base64 → localStorage 저장
+  function saveDB() {
+    const data = db.export();
+    let binary = '';
+    for (let i = 0; i < data.length; i += 8192) {
+      binary += String.fromCharCode(...data.subarray(i, Math.min(i + 8192, data.length)));
+    }
+    localStorage.setItem(DB_STORE, btoa(binary));
+    updateDBInfo();
+  }
+
+  // ── 데이터 접근 함수 ─────────────────────────────────────
+  function getRecords() {
+    const res = db.exec('SELECT date, weight, memo FROM records ORDER BY date');
+    if (!res.length) return [];
+    return res[0].values.map(([date, weight, memo]) => ({
+      date, weight, memo: memo || ''
+    }));
+  }
+
+  function dbGet(key) {
+    const stmt = db.prepare('SELECT value FROM settings WHERE key = ?');
+    stmt.bind([key]);
+    let val = null;
+    if (stmt.step()) {
+      try { val = JSON.parse(stmt.getAsObject().value); }
+      catch { val = stmt.getAsObject().value; }
+    }
+    stmt.free();
+    return val;
+  }
+
+  function dbSet(key, val) {
+    db.run('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', [key, JSON.stringify(val)]);
+    saveDB();
+  }
+
+  // ── DB 정보 표시 ─────────────────────────────────────────
+  function updateDBInfo() {
+    const el = document.getElementById('dbInfo');
+    if (!el || !db) return;
+    const countRes = db.exec('SELECT COUNT(*) FROM records');
+    const count = countRes.length ? countRes[0].values[0][0] : 0;
+    const raw = localStorage.getItem(DB_STORE) || '';
+    const kb  = (raw.length * 0.75 / 1024).toFixed(1);
+    el.innerHTML = `🗄️ SQLite 저장소 — 기록 <span>${count}건</span> · DB 크기 <span>~${kb} KB</span>`;
+  }
+
+  // ── 백업 알림 시스템 ─────────────────────────────────────
+  function getLastBackupDays() {
+    const last = localStorage.getItem(KEY_LAST_BACKUP);
+    if (!last) return null; // 한 번도 백업 안 함
+    return Math.floor((Date.now() - new Date(last).getTime()) / 86400000);
+  }
+
+  function updateLastBackupUI() {
+    const last = localStorage.getItem(KEY_LAST_BACKUP);
+    const el   = document.getElementById('lastBackupVal');
+    if (!el) return;
+    if (!last) {
+      el.textContent = '없음';
+      el.style.color = '#ef4444';
+      return;
+    }
+    const days = Math.floor((Date.now() - new Date(last).getTime()) / 86400000);
+    const label = days === 0 ? '오늘' : days === 1 ? '어제' : `${days}일 전`;
+    el.textContent = `${last} (${label})`;
+    el.style.color = days < BACKUP_WARN_DAYS ? '#22c55e'
+                   : days < BACKUP_DANGER_DAYS ? '#f59e0b' : '#ef4444';
+  }
+
+  function checkBackupReminder() {
+    const days    = getLastBackupDays();
+    const banner  = document.getElementById('backupBanner');
+    const records = getRecords();
+    if (!banner || records.length === 0) return; // 기록이 없으면 알림 불필요
+
+    let type = '', icon = '', title = '', desc = '';
+
+    if (days === null) {
+      type  = 'warn';
+      icon  = '💾';
+      title = '아직 백업을 하지 않았습니다';
+      desc  = '사이트 데이터를 지우면 모든 기록이 삭제됩니다. 지금 바로 백업하세요.';
+    } else if (days >= BACKUP_DANGER_DAYS) {
+      type  = 'danger';
+      icon  = '🚨';
+      title = `마지막 백업으로부터 ${days}일이 지났습니다`;
+      desc  = '데이터 유실 위험이 높습니다. 지금 즉시 백업해 주세요.';
+    } else if (days >= BACKUP_WARN_DAYS) {
+      type  = 'warn';
+      icon  = '⚠️';
+      title = `마지막 백업으로부터 ${days}일이 지났습니다`;
+      desc  = '주기적인 백업으로 데이터를 안전하게 보관하세요.';
+    } else {
+      return; // 7일 이내 → 배너 없음
+    }
+
+    banner.innerHTML = `
+      <div class="bk-banner ${type}">
+        <span class="bk-icon">${icon}</span>
+        <span class="bk-text">
+          <strong>${title}</strong>${desc}
+        </span>
+        <button class="bk-btn" onclick="exportJSON(); dismissBanner()">지금 백업</button>
+        <button class="bk-close" onclick="dismissBanner()" title="닫기">✕</button>
+      </div>`;
+  }
+
+  function dismissBanner() {
+    const banner = document.getElementById('backupBanner');
+    if (banner) banner.innerHTML = '';
+  }
+
+  function markBackupDone() {
+    const todayStr = new Date().toISOString().slice(0, 10);
+    localStorage.setItem(KEY_LAST_BACKUP, todayStr);
+    updateLastBackupUI();
+    // 백업 완료 후 배너를 초록색 완료 메시지로 교체
+    const banner = document.getElementById('backupBanner');
+    if (banner) {
+      banner.innerHTML = `
+        <div class="bk-banner ok">
+          <span class="bk-icon">✅</span>
+          <span class="bk-text"><strong>백업 완료!</strong>${todayStr} 백업 파일이 다운로드됐습니다. Downloads 폴더를 확인하세요.</span>
+          <button class="bk-close" onclick="dismissBanner()" title="닫기">✕</button>
+        </div>`;
+      setTimeout(dismissBanner, 5000); // 5초 후 자동 닫기
+    }
+  }
 
   // ── 다크모드 ─────────────────────────────────────────────
   function toggleDark() {
     const isDark = document.body.classList.toggle('dark');
     document.getElementById('darkBtn').textContent = isDark ? '☀️' : '🌙';
-    save(KEY_DARK, isDark);
+    localStorage.setItem(KEY_DARK, JSON.stringify(isDark));
     updateChart(getRecords());
   }
 
   function initDark() {
-    const isDark = load(KEY_DARK);
-    if (isDark) {
-      document.body.classList.add('dark');
-      document.getElementById('darkBtn').textContent = '☀️';
-    }
+    try {
+      const isDark = JSON.parse(localStorage.getItem(KEY_DARK));
+      if (isDark) {
+        document.body.classList.add('dark');
+        document.getElementById('darkBtn').textContent = '☀️';
+      }
+    } catch {}
   }
 
   // ── Init ─────────────────────────────────────────────────
-  let chartRange = 7;
+  let chartRange  = 7;
   let weightChart = null;
 
-  document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('DOMContentLoaded', async () => {
     initDark();
     document.getElementById('inputDate').value = today();
+
+    try {
+      await initDB();
+    } catch (err) {
+      console.error('SQLite 초기화 실패:', err);
+      alert('데이터베이스 초기화에 실패했습니다.\n인터넷 연결을 확인해 주세요.');
+    }
+
+    // 로딩 오버레이 제거
+    const overlay = document.getElementById('loadingOverlay');
+    overlay.style.opacity = '0';
+    setTimeout(() => overlay.remove(), 300);
+
     loadGoalUI();
     loadHeightUI();
+    updateDBInfo();
+    updateLastBackupUI();
     render();
+    checkBackupReminder(); // 앱 시작 시 백업 알림 체크
   });
 
   function today() {
@@ -525,33 +828,35 @@
     if (!date) return alert('날짜를 입력해주세요.');
     if (isNaN(weight) || weight <= 0) return alert('체중을 올바르게 입력해주세요.');
 
-    const records = getRecords();
-    const existing = records.findIndex(r => r.date === date);
-
-    if (existing >= 0) {
+    // 중복 날짜 확인
+    const existRes = db.exec(`SELECT date FROM records WHERE date = '${date}'`);
+    if (existRes.length && existRes[0].values.length) {
       if (!confirm('같은 날짜 기록이 있습니다. 덮어쓸까요?')) return;
-      records[existing] = { date, weight, memo };
-    } else {
-      records.push({ date, weight, memo });
     }
 
-    records.sort((a, b) => a.date.localeCompare(b.date));
-    saveRecords(records);
+    db.run(
+      'INSERT OR REPLACE INTO records (date, weight, memo) VALUES (?, ?, ?)',
+      [date, weight, memo]
+    );
+    saveDB();
+
     document.getElementById('inputWeight').value = '';
-    document.getElementById('inputMemo').value = '';
+    document.getElementById('inputMemo').value   = '';
     render();
   }
 
   // ── Delete ───────────────────────────────────────────────
   function deleteRecord(date) {
     if (!confirm(`${date} 기록을 삭제할까요?`)) return;
-    saveRecords(getRecords().filter(r => r.date !== date));
+    db.run('DELETE FROM records WHERE date = ?', [date]);
+    saveDB();
     render();
   }
 
   function clearAll() {
     if (!confirm('모든 기록을 삭제할까요?')) return;
-    saveRecords([]);
+    db.run('DELETE FROM records');
+    saveDB();
     render();
   }
 
@@ -560,12 +865,12 @@
     const start  = parseFloat(document.getElementById('goalStart').value);
     const target = parseFloat(document.getElementById('goalTarget').value);
     if (isNaN(start) || isNaN(target)) return alert('시작/목표 체중을 입력해주세요.');
-    save(KEY_GOAL, { start, target });
+    dbSet('goal', { start, target });
     updateGoalProgress();
   }
 
   function loadGoalUI() {
-    const g = load(KEY_GOAL);
+    const g = dbGet('goal');
     if (!g) return;
     document.getElementById('goalStart').value  = g.start;
     document.getElementById('goalTarget').value = g.target;
@@ -573,7 +878,7 @@
   }
 
   function updateGoalProgress() {
-    const g = load(KEY_GOAL);
+    const g       = dbGet('goal');
     const records = getRecords();
     const section = document.getElementById('goalSection');
     if (!g) { section.style.display = 'none'; return; }
@@ -583,9 +888,9 @@
     document.getElementById('goalTargetLbl').textContent = `${g.target}kg`;
 
     if (records.length === 0) {
-      document.getElementById('goalPct').textContent     = '0%';
-      document.getElementById('goalFill').style.width   = '0%';
-      document.getElementById('goalMsg').textContent    = '기록을 입력하면 진행률이 표시됩니다.';
+      document.getElementById('goalPct').textContent   = '0%';
+      document.getElementById('goalFill').style.width  = '0%';
+      document.getElementById('goalMsg').textContent   = '기록을 입력하면 진행률이 표시됩니다.';
       return;
     }
 
@@ -596,9 +901,11 @@
     const diff    = Math.abs((current - g.target).toFixed(1));
     const reached = (g.target >= g.start ? current >= g.target : current <= g.target);
 
-    document.getElementById('goalPct').textContent   = `${pct}%`;
-    document.getElementById('goalFill').style.width  = `${pct}%`;
-    document.getElementById('goalMsg').textContent   = reached ? '🎉 목표 달성!' : `목표까지 ${diff}kg 남았습니다.`;
+    document.getElementById('goalPct').textContent  = `${pct}%`;
+    document.getElementById('goalFill').style.width = `${pct}%`;
+    document.getElementById('goalMsg').textContent  = reached
+      ? '🎉 목표 달성!'
+      : `목표까지 ${diff}kg 남았습니다.`;
   }
 
   // ── 감량 속도 ────────────────────────────────────────────
@@ -607,9 +914,7 @@
     const el = document.getElementById('paceSection');
     if (records.length < 2) { el.innerHTML = ''; return; }
 
-    const now = new Date();
-
-    // 최근 4주 우선, 부족하면 전체 기간
+    const now    = new Date();
     const recent = records.filter(r => daysDiff(r.date, now) <= 28);
     const sample = recent.length >= 2 ? recent : records;
     const periodLabel = recent.length >= 2 ? '최근 4주' : '전체 기간';
@@ -625,7 +930,7 @@
     const paceColor  = isLosing ? '#22c55e' : weeklyRate > 0 ? '#ef4444' : 'var(--sub)';
     const paceStr    = `${isLosing ? '▼' : weeklyRate > 0 ? '▲' : '→'} ${absRate.toFixed(2)}kg/주`;
 
-    const g       = load(KEY_GOAL);
+    const g       = dbGet('goal');
     const current = last.weight;
     let goalHTML  = '';
 
@@ -666,14 +971,14 @@
 
   // ── BMI ──────────────────────────────────────────────────
   function loadHeightUI() {
-    const h = load(KEY_HEIGHT);
+    const h = dbGet('height');
     if (h) document.getElementById('bmiHeight').value = h;
   }
 
   function calcBMI() {
     const hVal = parseFloat(document.getElementById('bmiHeight').value);
     if (isNaN(hVal) || hVal < 50) return alert('키를 올바르게 입력해주세요.');
-    save(KEY_HEIGHT, hVal);
+    dbSet('height', hVal);
 
     const records = getRecords();
     const el = document.getElementById('bmiResult');
@@ -697,7 +1002,6 @@
   function calcStreaks(records) {
     if (records.length === 0) return { best: 0, current: 0 };
 
-    // 최장 연속 기록일 계산
     let best = 1, cur = 1;
     for (let i = 1; i < records.length; i++) {
       const diff = (new Date(records[i].date) - new Date(records[i-1].date)) / 86400000;
@@ -705,13 +1009,12 @@
       if (cur > best) best = cur;
     }
 
-    // 현재 연속 기록일 (오늘 or 어제부터 역산)
-    const today     = new Date().toISOString().slice(0, 10);
-    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-    const lastDate  = records[records.length - 1].date;
+    const todayStr     = new Date().toISOString().slice(0, 10);
+    const yesterdayStr = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    const lastDate     = records[records.length - 1].date;
 
     let streak = 0;
-    if (lastDate === today || lastDate === yesterday) {
+    if (lastDate === todayStr || lastDate === yesterdayStr) {
       streak = 1;
       for (let i = records.length - 2; i >= 0; i--) {
         const diff = (new Date(records[i+1].date) - new Date(records[i].date)) / 86400000;
@@ -732,17 +1035,16 @@
   function updateStats(records) {
     const ids = ['statCurrent','statWeekAvg','statMonthAvg','statMin','statMax','statTotal','statStreak','statBestStreak','statCount'];
     if (records.length === 0) {
-      ids.forEach(id => { document.getElementById(id).textContent = '—'; document.getElementById(id).style.color = ''; });
+      ids.forEach(id => {
+        document.getElementById(id).textContent = '—';
+        document.getElementById(id).style.color = '';
+      });
       return;
     }
 
     const C = {
-      primary : '#4f8ef7',
-      green   : '#22c55e',
-      red     : '#ef4444',
-      amber   : '#f59e0b',
-      gold    : '#eab308',
-      sub     : 'var(--sub)',
+      primary: '#4f8ef7', green: '#22c55e', red: '#ef4444',
+      amber: '#f59e0b', gold: '#eab308', sub: 'var(--sub)',
     };
 
     const weights = records.map(r => r.weight);
@@ -755,25 +1057,20 @@
     const diff    = parseFloat((current - weights[0]).toFixed(1));
     const streaks = calcStreaks(records);
 
-    // 행 1: 체중 계열 — 파란색
-    setVal('statCurrent',  `${current}kg`,                                  C.primary);
-    setVal('statWeekAvg',  last7.length  ? `${avg(last7)}kg`  : '—',        C.primary);
-    setVal('statMonthAvg', last30.length ? `${avg(last30)}kg` : '—',        C.primary);
-
-    // 행 2: 최저(초록) / 최고(빨강) / 총변화(감소=초록, 증가=빨강)
-    setVal('statMin',   `${Math.min(...weights)}kg`,                         C.green);
-    setVal('statMax',   `${Math.max(...weights)}kg`,                         C.red);
+    setVal('statCurrent',  `${current}kg`,                                   C.primary);
+    setVal('statWeekAvg',  last7.length  ? `${avg(last7)}kg`  : '—',         C.primary);
+    setVal('statMonthAvg', last30.length ? `${avg(last30)}kg` : '—',         C.primary);
+    setVal('statMin',   `${Math.min(...weights)}kg`,                          C.green);
+    setVal('statMax',   `${Math.max(...weights)}kg`,                          C.red);
     setVal('statTotal', `${diff > 0 ? '+' : ''}${diff}kg`,
            diff < 0 ? C.green : diff > 0 ? C.red : C.sub);
 
-    // 행 3: 현재 연속(길이별 색상) / 최장 연속(금색) / 총 기록(파랑)
     const streakColor = streaks.current === 0 ? C.sub
                       : streaks.current < 7   ? C.amber
-                      : streaks.current < 30  ? C.primary
-                      :                         C.green;
-    setVal('statStreak',      `${streaks.current}일`, streakColor);
-    setVal('statBestStreak',  `${streaks.best}일`,    C.gold);
-    setVal('statCount',       `${records.length}일`,  C.primary);
+                      : streaks.current < 30  ? C.primary : C.green;
+    setVal('statStreak',     `${streaks.current}일`, streakColor);
+    setVal('statBestStreak', `${streaks.best}일`,    C.gold);
+    setVal('statCount',      `${records.length}일`,  C.primary);
   }
 
   function daysDiff(dateStr, now) {
@@ -789,7 +1086,7 @@
   }
 
   function updateChart(records) {
-    const isDark   = document.body.classList.contains('dark');
+    const isDark    = document.body.classList.contains('dark');
     const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
     const tickColor = isDark ? '#94a3b8' : '#64748b';
 
@@ -798,9 +1095,9 @@
       ? records
       : records.filter(r => daysDiff(r.date, now) <= chartRange);
 
-    const labels   = filtered.map(r => r.date.slice(5));
-    const data     = filtered.map(r => r.weight);
-    const goal     = load(KEY_GOAL);
+    const labels = filtered.map(r => r.date.slice(5));
+    const data   = filtered.map(r => r.weight);
+    const goal   = dbGet('goal');
 
     if (weightChart) weightChart.destroy();
 
@@ -865,13 +1162,12 @@
     }
     const labels  = ['일', '월', '화', '수', '목', '금', '토'];
     const buckets = Array.from({length: 7}, () => []);
-    for (const r of records) {
-      buckets[new Date(r.date).getDay()].push(r.weight);
-    }
-    const avgs    = buckets.map(b => b.length ? b.reduce((a,c) => a+c, 0) / b.length : null);
-    const valid   = avgs.filter(v => v !== null);
-    const minAvg  = valid.length ? Math.min(...valid) : 0;
-    const range   = valid.length ? (Math.max(...valid) - minAvg) || 1 : 1;
+    for (const r of records) buckets[new Date(r.date).getDay()].push(r.weight);
+
+    const avgs   = buckets.map(b => b.length ? b.reduce((a,c) => a+c, 0) / b.length : null);
+    const valid  = avgs.filter(v => v !== null);
+    const minAvg = valid.length ? Math.min(...valid) : 0;
+    const range  = valid.length ? (Math.max(...valid) - minAvg) || 1 : 1;
     const todayDow = new Date().getDay();
 
     el.innerHTML = labels.map((d, i) => {
@@ -886,7 +1182,7 @@
     }).join('');
   }
 
-  // ── Table ─────────────────────────────────────────────────
+  // ── Table (아코디언) ──────────────────────────────────────
   function toggleMemo(date) {
     const el = document.getElementById(`memo-${date}`);
     if (el) el.style.display = el.style.display === 'none' ? 'table-row' : 'none';
@@ -909,10 +1205,9 @@
     }
 
     const reversed = [...records].reverse();
+    const years    = [];
+    const byYear   = {};
 
-    // 연도 → 월 그룹핑
-    const years = [];
-    const byYear = {};
     for (const r of reversed) {
       const y = r.date.slice(0, 4);
       const m = r.date.slice(0, 7);
@@ -937,10 +1232,10 @@
         <div id="y-${year}" style="${isLatestY ? '' : 'display:none'}">`;
 
       ydata.months.forEach((month, mi) => {
-        const mRecs      = ydata.byMonth[month];
-        const isLatestM  = isLatestY && mi === 0;
+        const mRecs     = ydata.byMonth[month];
+        const isLatestM = isLatestY && mi === 0;
         const monthLabel = parseInt(month.slice(5)) + '월';
-        const avg        = (mRecs.reduce((s, r) => s + r.weight, 0) / mRecs.length).toFixed(1);
+        const avg = (mRecs.reduce((s, r) => s + r.weight, 0) / mRecs.length).toFixed(1);
 
         html += `
           <div class="acc-month-hd" onclick="toggleAcc('m-${month}')">
@@ -990,20 +1285,32 @@
     wrap.innerHTML = html;
   }
 
-  // ── Backup / Restore ──────────────────────────────────────
-  function exportBackup() {
+  // ── 백업 / 복원 ──────────────────────────────────────────
+  function exportJSON() {
     const backup = {
       version: 1,
       exportedAt: new Date().toISOString(),
-      records: load(KEY_RECORDS) || [],
-      goal:    load(KEY_GOAL),
-      height:  load(KEY_HEIGHT),
+      records: getRecords(),
+      goal:    dbGet('goal'),
+      height:  dbGet('height'),
     };
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
     a.href     = url;
-    a.download = `체중관리_백업_${new Date().toISOString().slice(0,10)}.json`;
+    a.download = `체중관리_백업_${today()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    markBackupDone(); // 백업 날짜 기록 + 완료 배너
+  }
+
+  function exportSQLite() {
+    const data = db.export();
+    const blob = new Blob([data], { type: 'application/octet-stream' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `체중관리_${today()}.db`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -1015,33 +1322,39 @@
     reader.onload = ev => {
       try {
         const data = JSON.parse(ev.target.result);
-        if (!Array.isArray(data.records)) throw new Error();
+        if (!Array.isArray(data.records)) throw new Error('잘못된 형식');
 
         const existing = getRecords();
         if (existing.length > 0) {
           if (!confirm(`기존 기록 ${existing.length}개가 있습니다.\n백업 파일과 병합할까요?\n(취소 시 기존 데이터를 덮어씁니다)`)) {
-            saveRecords(data.records);
-          } else {
-            const merged = [...existing];
+            db.run('DELETE FROM records');
             data.records.forEach(r => {
-              const idx = merged.findIndex(m => m.date === r.date);
-              if (idx >= 0) merged[idx] = r; else merged.push(r);
+              db.run('INSERT INTO records (date, weight, memo) VALUES (?, ?, ?)',
+                [r.date, r.weight, r.memo || '']);
             });
-            merged.sort((a, b) => a.date.localeCompare(b.date));
-            saveRecords(merged);
+          } else {
+            data.records.forEach(r => {
+              db.run('INSERT OR REPLACE INTO records (date, weight, memo) VALUES (?, ?, ?)',
+                [r.date, r.weight, r.memo || '']);
+            });
           }
         } else {
-          saveRecords(data.records);
+          data.records.forEach(r => {
+            db.run('INSERT OR REPLACE INTO records (date, weight, memo) VALUES (?, ?, ?)',
+              [r.date, r.weight, r.memo || '']);
+          });
         }
 
-        if (data.goal)   save(KEY_GOAL, data.goal);
-        if (data.height) save(KEY_HEIGHT, data.height);
+        if (data.goal)   db.run('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', ['goal',   JSON.stringify(data.goal)]);
+        if (data.height) db.run('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', ['height', JSON.stringify(data.height)]);
+        saveDB();
 
-        const msg = document.getElementById('restoreMsg');
+        const count = getRecords().length;
+        const msg   = document.getElementById('restoreMsg');
         msg.style.color = '#22c55e';
-        msg.textContent = `복원 완료 — 기록 ${getRecords().length}개 불러왔습니다.`;
+        msg.textContent = `복원 완료 — 기록 ${count}개 불러왔습니다.`;
         render();
-      } catch {
+      } catch (err) {
         const msg = document.getElementById('restoreMsg');
         msg.style.color = '#ef4444';
         msg.textContent = '파일 형식이 올바르지 않습니다.';
@@ -1060,7 +1373,7 @@
     updateTable(records);
     updateGoalProgress();
     updatePace();
-    const h = load(KEY_HEIGHT);
+    const h = dbGet('height');
     if (h) calcBMI();
   }
 </script>
