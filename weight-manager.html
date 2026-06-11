@@ -341,6 +341,62 @@
     .db-info { background: var(--bg); border-radius: 8px; padding: 10px 14px; margin-top: 14px; font-size: 0.82rem; color: var(--sub); }
     .db-info span { color: var(--primary); font-weight: 600; }
 
+    /* ── 혈압 ── */
+    .period-row { display: flex; gap: 8px; margin-top: 6px; }
+    .period-btn {
+      flex: 1; padding: 8px; border: 1px solid var(--border);
+      border-radius: 8px; font-size: 0.88rem; font-weight: 600;
+      cursor: pointer; background: var(--card); color: var(--sub);
+      transition: all 0.15s;
+    }
+    .period-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+    .bp-stats-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 4px;
+    }
+    .bp-stat-box {
+      background: var(--bg); border-radius: 8px; padding: 12px;
+      transition: background 0.25s;
+    }
+    .bp-stat-box .bs-period {
+      font-size: 0.75rem; color: var(--sub); font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px;
+    }
+    .bp-stat-box .bs-val {
+      font-size: 1.3rem; font-weight: 700; color: var(--primary);
+      line-height: 1.2;
+    }
+    .bp-stat-box .bs-pulse {
+      font-size: 0.78rem; color: var(--sub); margin-top: 4px;
+    }
+    .bp-stat-box .bs-cat {
+      display: inline-block; padding: 2px 8px; border-radius: 99px;
+      font-size: 0.72rem; font-weight: 700; margin-top: 6px;
+    }
+
+    .bp-avg-row {
+      display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-top: 10px;
+    }
+
+    .bp-chart-wrap { position: relative; height: 220px; }
+
+    .bp-filter-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+    .bp-filter-btn {
+      padding: 5px 14px; border: 1px solid var(--border); border-radius: 20px;
+      font-size: 0.82rem; cursor: pointer; background: var(--card);
+      color: var(--sub); transition: all 0.15s;
+    }
+    .bp-filter-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+    .bp-period-badge {
+      display: inline-block; padding: 1px 7px; border-radius: 99px;
+      font-size: 0.72rem; font-weight: 700;
+    }
+    .bp-period-badge.morning { background: #fef3c7; color: #92400e; }
+    .bp-period-badge.evening { background: #ede9fe; color: #5b21b6; }
+    body.dark .bp-period-badge.morning { background: #451a03; color: #fcd34d; }
+    body.dark .bp-period-badge.evening { background: #2e1065; color: #c4b5fd; }
+
     /* ── 백업 알림 배너 ── */
     .bk-banner {
       max-width: 900px; margin: 0 auto 16px;
@@ -518,15 +574,181 @@
 
   <!-- 6. 기록 목록 -->
   <div class="card full">
-    <h2>기록 목록</h2>
+    <h2>체중 기록 목록</h2>
     <div id="tableWrap"></div>
     <button class="btn btn-danger" onclick="clearAll()" style="max-width:200px">전체 삭제</button>
+  </div>
+
+  <!-- 혈압 섹션 구분선 -->
+  <div style="grid-column:1/-1;display:flex;align-items:center;gap:12px;margin:4px 0 -4px">
+    <span style="font-size:1rem;font-weight:700;color:var(--primary);white-space:nowrap">🩺 혈압 관리</span>
+    <div style="flex:1;height:1px;background:var(--border)"></div>
+  </div>
+
+  <!-- 8. 혈압 입력 -->
+  <div class="card">
+    <h2>혈압 입력</h2>
+    <label>날짜</label>
+    <input type="date" id="bpDate" />
+    <label>시간대</label>
+    <div class="period-row">
+      <button class="period-btn active" id="periodMorning" onclick="setPeriod('morning')">🌅 아침</button>
+      <button class="period-btn" id="periodEvening" onclick="setPeriod('evening')">🌆 저녁</button>
+    </div>
+    <label>수축기 mmHg <span style="font-size:0.78rem;color:var(--sub)">(최고혈압)</span></label>
+    <input type="number" id="bpSystolic" placeholder="예: 120" min="50" max="250" />
+    <label>이완기 mmHg <span style="font-size:0.78rem;color:var(--sub)">(최저혈압)</span></label>
+    <input type="number" id="bpDiastolic" placeholder="예: 80" min="30" max="150" />
+    <label>맥박 bpm <span style="font-size:0.78rem;color:var(--sub)">(선택)</span></label>
+    <input type="number" id="bpPulse" placeholder="예: 72" min="30" max="200" />
+    <button class="btn btn-primary" onclick="addBPRecord()">혈압 저장</button>
+  </div>
+
+  <!-- 9. 혈압 통계 -->
+  <div class="card">
+    <h2>혈압 통계</h2>
+    <div class="bp-stats-grid" id="bpLatest">
+      <div class="bp-stat-box">
+        <div class="bs-period">🌅 최근 아침</div>
+        <div class="bs-val" id="bpLatestMorning">—</div>
+        <div class="bs-pulse" id="bpPulseMorning"></div>
+        <span class="bs-cat" id="bpCatMorning"></span>
+      </div>
+      <div class="bp-stat-box">
+        <div class="bs-period">🌆 최근 저녁</div>
+        <div class="bs-val" id="bpLatestEvening">—</div>
+        <div class="bs-pulse" id="bpPulseEvening"></div>
+        <span class="bs-cat" id="bpCatEvening"></span>
+      </div>
+    </div>
+    <div class="bp-avg-row">
+      <div class="stat-box">
+        <div class="val" id="bpAvg7" style="font-size:1.1rem">—</div>
+        <div class="lbl">7일 평균</div>
+      </div>
+      <div class="stat-box">
+        <div class="val" id="bpAvg30" style="font-size:1.1rem">—</div>
+        <div class="lbl">30일 평균</div>
+      </div>
+      <div class="stat-box">
+        <div class="val" id="bpCount">—</div>
+        <div class="lbl">총 기록</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 10. 고혈압 분류표 -->
+  <div class="card full">
+    <h2>고혈압 분류 기준 <span style="font-size:0.75rem;font-weight:400;color:var(--sub)">(대한고혈압학회)</span></h2>
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:0.85rem;min-width:340px">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border)">
+            <th style="padding:8px 12px;text-align:left;color:var(--sub);font-weight:600">분류</th>
+            <th style="padding:8px 12px;text-align:center;color:var(--sub);font-weight:600">수축기 (mmHg)</th>
+            <th style="padding:8px 4px;text-align:center;color:var(--sub);font-weight:600"></th>
+            <th style="padding:8px 12px;text-align:center;color:var(--sub);font-weight:600">이완기 (mmHg)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:9px 12px">
+              <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#3b82f6;margin-right:7px;vertical-align:middle"></span>
+              <strong style="color:#3b82f6">저혈압</strong>
+            </td>
+            <td style="padding:9px 12px;text-align:center">90 미만</td>
+            <td style="padding:9px 4px;text-align:center;color:var(--sub);font-size:0.75rem">그리고</td>
+            <td style="padding:9px 12px;text-align:center">60 미만</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:9px 12px">
+              <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#22c55e;margin-right:7px;vertical-align:middle"></span>
+              <strong style="color:#22c55e">정상</strong>
+            </td>
+            <td style="padding:9px 12px;text-align:center">120 미만</td>
+            <td style="padding:9px 4px;text-align:center;color:var(--sub);font-size:0.75rem">그리고</td>
+            <td style="padding:9px 12px;text-align:center">80 미만</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:9px 12px">
+              <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#84cc16;margin-right:7px;vertical-align:middle"></span>
+              <strong style="color:#84cc16">주의혈압</strong>
+            </td>
+            <td style="padding:9px 12px;text-align:center">120 ~ 129</td>
+            <td style="padding:9px 4px;text-align:center;color:var(--sub);font-size:0.75rem">그리고</td>
+            <td style="padding:9px 12px;text-align:center">80 미만</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:9px 12px">
+              <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#f59e0b;margin-right:7px;vertical-align:middle"></span>
+              <strong style="color:#f59e0b">고혈압 전단계</strong>
+            </td>
+            <td style="padding:9px 12px;text-align:center">130 ~ 139</td>
+            <td style="padding:9px 4px;text-align:center;color:var(--sub);font-size:0.75rem">또는</td>
+            <td style="padding:9px 12px;text-align:center">80 ~ 89</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:9px 12px">
+              <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#ef4444;margin-right:7px;vertical-align:middle"></span>
+              <strong style="color:#ef4444">1기 고혈압</strong>
+            </td>
+            <td style="padding:9px 12px;text-align:center">140 ~ 159</td>
+            <td style="padding:9px 4px;text-align:center;color:var(--sub);font-size:0.75rem">또는</td>
+            <td style="padding:9px 12px;text-align:center">90 ~ 99</td>
+          </tr>
+          <tr>
+            <td style="padding:9px 12px">
+              <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#991b1b;margin-right:7px;vertical-align:middle"></span>
+              <strong style="color:#991b1b">2기 고혈압</strong>
+            </td>
+            <td style="padding:9px 12px;text-align:center">160 이상</td>
+            <td style="padding:9px 4px;text-align:center;color:var(--sub);font-size:0.75rem">또는</td>
+            <td style="padding:9px 12px;text-align:center">100 이상</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size:0.75rem;color:var(--sub);margin-top:10px">※ 수축기와 이완기가 다른 분류에 해당할 경우 높은 단계로 분류합니다.</p>
+  </div>
+
+  <!-- 11. 혈압 추이 -->
+  <div class="card full">
+    <h2>혈압 추이</h2>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
+      <div class="bp-filter-row" style="margin-bottom:0">
+        <button class="bp-filter-btn active" onclick="setBPRange(7,this)">7일</button>
+        <button class="bp-filter-btn" onclick="setBPRange(30,this)">30일</button>
+        <button class="bp-filter-btn" onclick="setBPRange(90,this)">90일</button>
+        <button class="bp-filter-btn" onclick="setBPRange(0,this)">전체</button>
+      </div>
+      <div class="bp-filter-row" style="margin-bottom:0">
+        <button class="bp-filter-btn active" id="bpFAll" onclick="setBPFilter('all',this)">전체</button>
+        <button class="bp-filter-btn" id="bpFMor" onclick="setBPFilter('morning',this)">🌅 아침</button>
+        <button class="bp-filter-btn" id="bpFEve" onclick="setBPFilter('evening',this)">🌆 저녁</button>
+      </div>
+    </div>
+    <div class="bp-chart-wrap">
+      <canvas id="bpChart"></canvas>
+    </div>
+  </div>
+
+  <!-- 11. 혈압 기록 목록 -->
+  <div class="card full">
+    <h2>혈압 기록 목록</h2>
+    <div id="bpTableWrap"></div>
+    <button class="btn btn-danger" onclick="clearAllBP()" style="max-width:200px">혈압 전체 삭제</button>
+  </div>
+
+  <!-- 백업 섹션 구분선 -->
+  <div style="grid-column:1/-1;display:flex;align-items:center;gap:12px;margin:4px 0 -4px">
+    <span style="font-size:1rem;font-weight:700;color:var(--primary);white-space:nowrap">💾 백업 / 복원</span>
+    <div style="flex:1;height:1px;background:var(--border)"></div>
   </div>
 
   <!-- 7. 백업/복원 -->
   <div class="card full">
     <h2 style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:0" onclick="toggleBackupCard()">
-      <span>백업 / 복원</span>
+      <span>상세 설정</span>
       <span id="backupArrow" style="font-size:0.75rem;color:var(--sub);font-weight:400">▼</span>
     </h2>
     <div id="backupBody" style="display:none">
@@ -583,6 +805,15 @@
         date   TEXT PRIMARY KEY,
         weight REAL NOT NULL,
         memo   TEXT DEFAULT ''
+      );
+      CREATE TABLE IF NOT EXISTS bp_records (
+        date      TEXT NOT NULL,
+        period    TEXT NOT NULL,
+        systolic  INTEGER NOT NULL,
+        diastolic INTEGER NOT NULL,
+        pulse     INTEGER,
+        memo      TEXT DEFAULT '',
+        PRIMARY KEY (date, period)
       );
       CREATE TABLE IF NOT EXISTS settings (
         key   TEXT PRIMARY KEY,
@@ -669,11 +900,13 @@
   function updateDBInfo() {
     const el = document.getElementById('dbInfo');
     if (!el || !db) return;
-    const countRes = db.exec('SELECT COUNT(*) FROM records');
-    const count = countRes.length ? countRes[0].values[0][0] : 0;
+    const wRes  = db.exec('SELECT COUNT(*) FROM records');
+    const bpRes = db.exec('SELECT COUNT(*) FROM bp_records');
+    const wCount  = wRes.length  ? wRes[0].values[0][0]  : 0;
+    const bpCount = bpRes.length ? bpRes[0].values[0][0] : 0;
     const raw = localStorage.getItem(DB_STORE) || '';
     const kb  = (raw.length * 0.75 / 1024).toFixed(1);
-    el.innerHTML = `🗄️ SQLite 저장소 — 기록 <span>${count}건</span> · DB 크기 <span>~${kb} KB</span>`;
+    el.innerHTML = `🗄️ SQLite — 체중 <span>${wCount}건</span> · 혈압 <span>${bpCount}건</span> · DB <span>~${kb} KB</span>`;
   }
 
   // ── 백업 알림 시스템 ─────────────────────────────────────
@@ -801,8 +1034,10 @@
     loadHeightUI();
     updateDBInfo();
     updateLastBackupUI();
+    document.getElementById('bpDate').value = today();
     render();
-    checkBackupReminder(); // 앱 시작 시 백업 알림 체크
+    renderBP();
+    checkBackupReminder();
   });
 
   function today() {
@@ -1289,9 +1524,10 @@
     const backup = {
       version: 1,
       exportedAt: new Date().toISOString(),
-      records: getRecords(),
-      goal:    dbGet('goal'),
-      height:  dbGet('height'),
+      records:   getRecords(),
+      bp_records: getBPRecords(),
+      goal:      dbGet('goal'),
+      height:    dbGet('height'),
     };
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
     const url  = URL.createObjectURL(blob);
@@ -1323,24 +1559,40 @@
         const data = JSON.parse(ev.target.result);
         if (!Array.isArray(data.records)) throw new Error('잘못된 형식');
 
-        const existing = getRecords();
-        if (existing.length > 0) {
-          if (!confirm(`기존 기록 ${existing.length}개가 있습니다.\n백업 파일과 병합할까요?\n(취소 시 기존 데이터를 덮어씁니다)`)) {
+        const existingW  = getRecords().length;
+        const existingBP = getBPRecords().length;
+        const hasExisting = existingW > 0 || existingBP > 0;
+
+        if (hasExisting) {
+          const existingDesc = [
+            existingW  > 0 ? `체중 ${existingW}개`  : '',
+            existingBP > 0 ? `혈압 ${existingBP}개` : '',
+          ].filter(Boolean).join(', ');
+
+          const merge = confirm(
+            `기존 기록이 있습니다 (${existingDesc}).\n` +
+            `백업 파일과 병합할까요?\n` +
+            `(취소 시 기존 데이터를 모두 덮어씁니다)`
+          );
+
+          if (!merge) {
+            // 덮어쓰기: 두 테이블 모두 삭제
             db.run('DELETE FROM records');
-            data.records.forEach(r => {
-              db.run('INSERT INTO records (date, weight, memo) VALUES (?, ?, ?)',
-                [r.date, r.weight, r.memo || '']);
-            });
-          } else {
-            data.records.forEach(r => {
-              db.run('INSERT OR REPLACE INTO records (date, weight, memo) VALUES (?, ?, ?)',
-                [r.date, r.weight, r.memo || '']);
-            });
+            db.run('DELETE FROM bp_records');
           }
-        } else {
-          data.records.forEach(r => {
-            db.run('INSERT OR REPLACE INTO records (date, weight, memo) VALUES (?, ?, ?)',
-              [r.date, r.weight, r.memo || '']);
+        }
+
+        // 체중 기록 복원
+        data.records.forEach(r => {
+          db.run('INSERT OR REPLACE INTO records (date, weight, memo) VALUES (?, ?, ?)',
+            [r.date, r.weight, r.memo || '']);
+        });
+
+        // 혈압 기록 복원
+        if (Array.isArray(data.bp_records)) {
+          data.bp_records.forEach(r => {
+            db.run('INSERT OR REPLACE INTO bp_records (date,period,systolic,diastolic,pulse,memo) VALUES (?,?,?,?,?,?)',
+              [r.date, r.period, r.systolic, r.diastolic, r.pulse || null, r.memo || '']);
           });
         }
 
@@ -1348,11 +1600,19 @@
         if (data.height) db.run('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', ['height', JSON.stringify(data.height)]);
         saveDB();
 
-        const count = getRecords().length;
-        const msg   = document.getElementById('restoreMsg');
+        const wCount  = getRecords().length;
+        const bpCount = getBPRecords().length;
+        const parts   = [
+          `체중 ${wCount}개`,
+          bpCount > 0 ? `혈압 ${bpCount}개` : '',
+        ].filter(Boolean).join(', ');
+
+        const msg = document.getElementById('restoreMsg');
         msg.style.color = '#22c55e';
-        msg.textContent = `복원 완료 — 기록 ${count}개 불러왔습니다.`;
+        msg.textContent = `복원 완료 — ${parts} 불러왔습니다.`;
+
         render();
+        renderBP();
       } catch (err) {
         const msg = document.getElementById('restoreMsg');
         msg.style.color = '#ef4444';
@@ -1361,6 +1621,275 @@
       e.target.value = '';
     };
     reader.readAsText(file);
+  }
+
+  // ── 혈압 ─────────────────────────────────────────────────
+  let bpPeriod    = 'morning';
+  let bpChartRange = 30;
+  let bpChartFilter = 'all';
+  let bpChartInst  = null;
+
+  function setPeriod(p) {
+    bpPeriod = p;
+    document.getElementById('periodMorning').classList.toggle('active', p === 'morning');
+    document.getElementById('periodEvening').classList.toggle('active', p === 'evening');
+  }
+
+  function getBPRecords() {
+    const res = db.exec('SELECT date, period, systolic, diastolic, pulse, memo FROM bp_records ORDER BY date, period');
+    if (!res.length) return [];
+    return res[0].values.map(([date, period, systolic, diastolic, pulse, memo]) => ({
+      date, period, systolic, diastolic, pulse: pulse || null, memo: memo || ''
+    }));
+  }
+
+  function bpCategory(sys, dia) {
+    if (sys < 90  || dia < 60)  return { label: '저혈압',      color: '#3b82f6' };
+    if (sys < 120 && dia < 80)  return { label: '정상',        color: '#22c55e' };
+    if (sys < 130 && dia < 80)  return { label: '주의혈압',    color: '#84cc16' };
+    if (sys < 140 || dia < 90)  return { label: '고혈압 전단계', color: '#f59e0b' };
+    if (sys < 160 || dia < 100) return { label: '1기 고혈압',  color: '#ef4444' };
+    return                             { label: '2기 고혈압',  color: '#991b1b' };
+  }
+
+  function addBPRecord() {
+    const date = document.getElementById('bpDate').value;
+    const sys  = parseInt(document.getElementById('bpSystolic').value);
+    const dia  = parseInt(document.getElementById('bpDiastolic').value);
+    const pls  = parseInt(document.getElementById('bpPulse').value) || null;
+
+    if (!date) return alert('날짜를 입력해주세요.');
+    if (isNaN(sys) || sys < 50 || sys > 250) return alert('수축기 혈압을 올바르게 입력해주세요. (50~250)');
+    if (isNaN(dia) || dia < 30 || dia > 150) return alert('이완기 혈압을 올바르게 입력해주세요. (30~150)');
+
+    const chk = db.exec(`SELECT date FROM bp_records WHERE date='${date}' AND period='${bpPeriod}'`);
+    if (chk.length && chk[0].values.length) {
+      if (!confirm(`${date} ${bpPeriod === 'morning' ? '아침' : '저녁'} 기록이 있습니다. 덮어쓸까요?`)) return;
+    }
+
+    db.run(
+      'INSERT OR REPLACE INTO bp_records (date, period, systolic, diastolic, pulse, memo) VALUES (?,?,?,?,?,?)',
+      [date, bpPeriod, sys, dia, pls, '']
+    );
+    saveDB();
+
+    document.getElementById('bpSystolic').value  = '';
+    document.getElementById('bpDiastolic').value = '';
+    document.getElementById('bpPulse').value     = '';
+    renderBP();
+  }
+
+  function deleteBPRecord(date, period) {
+    const label = period === 'morning' ? '아침' : '저녁';
+    if (!confirm(`${date} ${label} 혈압 기록을 삭제할까요?`)) return;
+    db.run('DELETE FROM bp_records WHERE date=? AND period=?', [date, period]);
+    saveDB();
+    renderBP();
+  }
+
+  function clearAllBP() {
+    if (!confirm('모든 혈압 기록을 삭제할까요?')) return;
+    db.run('DELETE FROM bp_records');
+    saveDB();
+    renderBP();
+  }
+
+  // 혈압 통계
+  function updateBPStats() {
+    const recs = getBPRecords();
+    const now  = new Date();
+
+    // 최근 아침/저녁
+    ['morning', 'evening'].forEach(p => {
+      const id    = p === 'morning' ? 'Morning' : 'Evening';
+      const last  = [...recs].reverse().find(r => r.period === p);
+      const valEl = document.getElementById(`bpLatest${id}`);
+      const plsEl = document.getElementById(`bpPulse${id}`);
+      const catEl = document.getElementById(`bpCat${id}`);
+      if (!last) {
+        valEl.textContent = '—'; plsEl.textContent = ''; catEl.textContent = '';
+        return;
+      }
+      const cat = bpCategory(last.systolic, last.diastolic);
+      valEl.textContent       = `${last.systolic} / ${last.diastolic}`;
+      valEl.style.color       = cat.color;
+      plsEl.textContent       = last.pulse ? `맥박 ${last.pulse} bpm` : '';
+      catEl.textContent       = cat.label;
+      catEl.style.background  = cat.color + '22';
+      catEl.style.color       = cat.color;
+    });
+
+    // 7일/30일 평균
+    function avgOf(days) {
+      const filtered = recs.filter(r => daysDiff(r.date, now) <= days);
+      if (!filtered.length) return null;
+      const avgSys = Math.round(filtered.reduce((s,r) => s + r.systolic,  0) / filtered.length);
+      const avgDia = Math.round(filtered.reduce((s,r) => s + r.diastolic, 0) / filtered.length);
+      return { sys: avgSys, dia: avgDia };
+    }
+
+    function setAvg(id, avg) {
+      const el = document.getElementById(id);
+      if (!avg) { el.textContent = '—'; el.style.color = ''; return; }
+      const cat = bpCategory(avg.sys, avg.dia);
+      el.textContent = `${avg.sys}/${avg.dia}`;
+      el.style.color = cat.color;
+      el.style.fontSize = '1rem';
+    }
+
+    setAvg('bpAvg7',  avgOf(7));
+    setAvg('bpAvg30', avgOf(30));
+    document.getElementById('bpCount').textContent = recs.length ? `${recs.length}건` : '—';
+    document.getElementById('bpCount').style.color = recs.length ? '#4f8ef7' : '';
+  }
+
+  // 혈압 차트
+  function setBPRange(days, btn) {
+    bpChartRange = days;
+    btn.closest('.bp-filter-row').querySelectorAll('.bp-filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    updateBPChart();
+  }
+
+  function setBPFilter(f, btn) {
+    bpChartFilter = f;
+    ['bpFAll','bpFMor','bpFEve'].forEach(id => document.getElementById(id).classList.remove('active'));
+    btn.classList.add('active');
+    updateBPChart();
+  }
+
+  function updateBPChart() {
+    const isDark    = document.body.classList.contains('dark');
+    const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
+    const tickColor = isDark ? '#94a3b8' : '#64748b';
+    const now       = new Date();
+
+    let recs = getBPRecords();
+    if (bpChartRange > 0) recs = recs.filter(r => daysDiff(r.date, now) <= bpChartRange);
+    if (bpChartFilter !== 'all') recs = recs.filter(r => r.period === bpChartFilter);
+
+    const labels  = recs.map(r => r.date.slice(5) + (bpChartFilter === 'all' ? (r.period === 'morning' ? '☀' : '🌙') : ''));
+    const sysData = recs.map(r => r.systolic);
+    const diaData = recs.map(r => r.diastolic);
+
+    if (bpChartInst) bpChartInst.destroy();
+    if (!recs.length) {
+      document.getElementById('bpChart').getContext('2d').clearRect(0,0,9999,9999);
+      return;
+    }
+
+    bpChartInst = new Chart(document.getElementById('bpChart').getContext('2d'), {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: '수축기',
+            data: sysData,
+            borderColor: '#ef4444',
+            backgroundColor: 'rgba(239,68,68,0.07)',
+            borderWidth: 2.5, pointRadius: sysData.length > 60 ? 0 : 4,
+            pointHoverRadius: 6, tension: 0.3, fill: true,
+          },
+          {
+            label: '이완기',
+            data: diaData,
+            borderColor: '#4f8ef7',
+            backgroundColor: 'rgba(79,142,247,0.07)',
+            borderWidth: 2.5, pointRadius: diaData.length > 60 ? 0 : 4,
+            pointHoverRadius: 6, tension: 0.3, fill: true,
+          },
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { boxWidth: 14, font: { size: 12 }, color: tickColor } },
+          annotation: {}
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { maxTicksLimit: 8, font: { size: 11 }, color: tickColor } },
+          y: {
+            grid: { color: gridColor },
+            ticks: { callback: v => `${v}`, font: { size: 11 }, color: tickColor },
+            suggestedMin: Math.min(...diaData, 60) - 5,
+            suggestedMax: Math.max(...sysData, 130) + 5,
+          }
+        }
+      }
+    });
+  }
+
+  // 혈압 기록 목록 (아코디언)
+  function updateBPTable() {
+    const wrap = document.getElementById('bpTableWrap');
+    const recs = getBPRecords();
+    if (!recs.length) { wrap.innerHTML = '<p class="empty">기록이 없습니다.</p>'; return; }
+
+    const reversed = [...recs].reverse();
+    const years = []; const byYear = {};
+    for (const r of reversed) {
+      const y = r.date.slice(0,4); const m = r.date.slice(0,7);
+      if (!byYear[y]) { byYear[y] = { months: [], byMonth: {} }; years.push(y); }
+      if (!byYear[y].byMonth[m]) { byYear[y].byMonth[m] = []; byYear[y].months.push(m); }
+      byYear[y].byMonth[m].push(r);
+    }
+
+    let html = '<div class="accordion">';
+    years.forEach((year, yi) => {
+      const ydata = byYear[year];
+      const total = ydata.months.reduce((s,m) => s + ydata.byMonth[m].length, 0);
+      const isLatestY = yi === 0;
+      html += `
+        <div class="acc-year-hd" onclick="toggleAcc('bp-y-${year}')">
+          <span>${year}년</span>
+          <span class="acc-meta">${total}건</span>
+          <span class="acc-arrow" id="arr-bp-y-${year}">${isLatestY?'▲':'▼'}</span>
+        </div>
+        <div id="bp-y-${year}" style="${isLatestY?'':'display:none'}">`;
+
+      ydata.months.forEach((month, mi) => {
+        const mRecs = ydata.byMonth[month];
+        const isLatestM = isLatestY && mi === 0;
+        const monthLabel = parseInt(month.slice(5)) + '월';
+
+        html += `
+          <div class="acc-month-hd" onclick="toggleAcc('bp-m-${month}')">
+            <span>${monthLabel}</span>
+            <span class="acc-meta">${mRecs.length}건</span>
+            <span class="acc-arrow" id="arr-bp-m-${month}">${isLatestM?'▲':'▼'}</span>
+          </div>
+          <div id="bp-m-${month}" style="${isLatestM?'':'display:none'}">
+            <table>
+              <thead><tr><th>일</th><th>시간대</th><th>수축기/이완기</th><th>맥박</th><th>분류</th><th></th></tr></thead>
+              <tbody>`;
+
+        for (const r of mRecs) {
+          const dd    = parseInt(r.date.slice(8)) + '일';
+          const pLabel = r.period === 'morning' ? '아침' : '저녁';
+          const pClass = r.period === 'morning' ? 'morning' : 'evening';
+          const cat   = bpCategory(r.systolic, r.diastolic);
+          html += `<tr class="data-row">
+            <td>${dd}</td>
+            <td><span class="bp-period-badge ${pClass}">${pLabel}</span></td>
+            <td><strong style="color:${cat.color}">${r.systolic}/${r.diastolic}</strong></td>
+            <td>${r.pulse ? r.pulse : '—'}</td>
+            <td><span style="font-size:0.78rem;color:${cat.color};font-weight:600">${cat.label}</span></td>
+            <td><button class="del-btn" onclick="deleteBPRecord('${r.date}','${r.period}')" title="삭제">✕</button></td>
+          </tr>`;
+        }
+        html += `</tbody></table></div>`;
+      });
+      html += `</div>`;
+    });
+    html += '</div>';
+    wrap.innerHTML = html;
+  }
+
+  function renderBP() {
+    updateBPStats();
+    updateBPChart();
+    updateBPTable();
   }
 
   // ── Render ────────────────────────────────────────────────
