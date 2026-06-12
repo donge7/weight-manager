@@ -640,75 +640,42 @@
   <!-- 10. 고혈압 분류표 -->
   <div class="card full">
     <h2>고혈압 분류 기준 <span style="font-size:0.75rem;font-weight:400;color:var(--sub)">(대한고혈압학회)</span></h2>
-    <div style="overflow-x:auto">
-      <table style="width:100%;border-collapse:collapse;font-size:0.85rem;min-width:340px">
-        <thead>
-          <tr style="border-bottom:2px solid var(--border)">
-            <th style="padding:8px 12px;text-align:left;color:var(--sub);font-weight:600">분류</th>
-            <th style="padding:8px 12px;text-align:center;color:var(--sub);font-weight:600">수축기 (mmHg)</th>
-            <th style="padding:8px 4px;text-align:center;color:var(--sub);font-weight:600"></th>
-            <th style="padding:8px 12px;text-align:center;color:var(--sub);font-weight:600">이완기 (mmHg)</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr style="border-bottom:1px solid var(--border)">
-            <td style="padding:9px 12px">
-              <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#3b82f6;margin-right:7px;vertical-align:middle"></span>
-              <strong style="color:#3b82f6">저혈압</strong>
-            </td>
-            <td style="padding:9px 12px;text-align:center">90 미만</td>
-            <td style="padding:9px 4px;text-align:center;color:var(--sub);font-size:0.75rem">그리고</td>
-            <td style="padding:9px 12px;text-align:center">60 미만</td>
-          </tr>
-          <tr style="border-bottom:1px solid var(--border)">
-            <td style="padding:9px 12px">
-              <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#22c55e;margin-right:7px;vertical-align:middle"></span>
-              <strong style="color:#22c55e">정상</strong>
-            </td>
-            <td style="padding:9px 12px;text-align:center">120 미만</td>
-            <td style="padding:9px 4px;text-align:center;color:var(--sub);font-size:0.75rem">그리고</td>
-            <td style="padding:9px 12px;text-align:center">80 미만</td>
-          </tr>
-          <tr style="border-bottom:1px solid var(--border)">
-            <td style="padding:9px 12px">
-              <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#84cc16;margin-right:7px;vertical-align:middle"></span>
-              <strong style="color:#84cc16">주의혈압</strong>
-            </td>
-            <td style="padding:9px 12px;text-align:center">120 ~ 129</td>
-            <td style="padding:9px 4px;text-align:center;color:var(--sub);font-size:0.75rem">그리고</td>
-            <td style="padding:9px 12px;text-align:center">80 미만</td>
-          </tr>
-          <tr style="border-bottom:1px solid var(--border)">
-            <td style="padding:9px 12px">
-              <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#f59e0b;margin-right:7px;vertical-align:middle"></span>
-              <strong style="color:#f59e0b">고혈압 전단계</strong>
-            </td>
-            <td style="padding:9px 12px;text-align:center">130 ~ 139</td>
-            <td style="padding:9px 4px;text-align:center;color:var(--sub);font-size:0.75rem">또는</td>
-            <td style="padding:9px 12px;text-align:center">80 ~ 89</td>
-          </tr>
-          <tr style="border-bottom:1px solid var(--border)">
-            <td style="padding:9px 12px">
-              <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#ef4444;margin-right:7px;vertical-align:middle"></span>
-              <strong style="color:#ef4444">1기 고혈압</strong>
-            </td>
-            <td style="padding:9px 12px;text-align:center">140 ~ 159</td>
-            <td style="padding:9px 4px;text-align:center;color:var(--sub);font-size:0.75rem">또는</td>
-            <td style="padding:9px 12px;text-align:center">90 ~ 99</td>
-          </tr>
-          <tr>
-            <td style="padding:9px 12px">
-              <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#991b1b;margin-right:7px;vertical-align:middle"></span>
-              <strong style="color:#991b1b">2기 고혈압</strong>
-            </td>
-            <td style="padding:9px 12px;text-align:center">160 이상</td>
-            <td style="padding:9px 4px;text-align:center;color:var(--sub);font-size:0.75rem">또는</td>
-            <td style="padding:9px 12px;text-align:center">100 이상</td>
-          </tr>
-        </tbody>
-      </table>
+    <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;font-size:0.72rem;color:var(--sub);font-weight:600;padding:0 4px">
+        <span>분류</span><span style="text-align:center">수축기</span><span style="text-align:center">이완기</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;align-items:center;background:var(--bg);border-radius:8px;padding:8px">
+        <span style="font-size:0.8rem;font-weight:700;color:#3b82f6">● 저혈압</span>
+        <span style="text-align:center;font-size:0.78rem">&lt; 90</span>
+        <span style="text-align:center;font-size:0.78rem">&lt; 60</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;align-items:center;background:var(--bg);border-radius:8px;padding:8px">
+        <span style="font-size:0.8rem;font-weight:700;color:#22c55e">● 정상</span>
+        <span style="text-align:center;font-size:0.78rem">&lt; 120</span>
+        <span style="text-align:center;font-size:0.78rem">&lt; 80</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;align-items:center;background:var(--bg);border-radius:8px;padding:8px">
+        <span style="font-size:0.8rem;font-weight:700;color:#84cc16">● 주의혈압</span>
+        <span style="text-align:center;font-size:0.78rem">120~129</span>
+        <span style="text-align:center;font-size:0.78rem">&lt; 80</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;align-items:center;background:var(--bg);border-radius:8px;padding:8px">
+        <span style="font-size:0.8rem;font-weight:700;color:#f59e0b">● 전단계</span>
+        <span style="text-align:center;font-size:0.78rem">130~139</span>
+        <span style="text-align:center;font-size:0.78rem">80~89</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;align-items:center;background:var(--bg);border-radius:8px;padding:8px">
+        <span style="font-size:0.8rem;font-weight:700;color:#ef4444">● 1기 고혈압</span>
+        <span style="text-align:center;font-size:0.78rem">140~159</span>
+        <span style="text-align:center;font-size:0.78rem">90~99</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;align-items:center;background:var(--bg);border-radius:8px;padding:8px">
+        <span style="font-size:0.8rem;font-weight:700;color:#991b1b">● 2기 고혈압</span>
+        <span style="text-align:center;font-size:0.78rem">≥ 160</span>
+        <span style="text-align:center;font-size:0.78rem">≥ 100</span>
+      </div>
     </div>
-    <p style="font-size:0.75rem;color:var(--sub);margin-top:10px">※ 수축기와 이완기가 다른 분류에 해당할 경우 높은 단계로 분류합니다.</p>
+    <p style="font-size:0.72rem;color:var(--sub);margin-top:8px">※ 수축기·이완기가 다른 단계일 경우 높은 쪽으로 분류</p>
   </div>
 
   <!-- 11. 혈압 추이 -->
@@ -1861,20 +1828,19 @@
           </div>
           <div id="bp-m-${month}" style="${isLatestM?'':'display:none'}">
             <table>
-              <thead><tr><th>일</th><th>시간대</th><th>수축기/이완기</th><th>맥박</th><th>분류</th><th></th></tr></thead>
+              <thead><tr><th>일</th><th>시간대</th><th>수축기/이완기</th><th>맥박</th><th></th></tr></thead>
               <tbody>`;
 
         for (const r of mRecs) {
-          const dd    = parseInt(r.date.slice(8)) + '일';
+          const dd     = parseInt(r.date.slice(8)) + '일';
           const pLabel = r.period === 'morning' ? '아침' : '저녁';
           const pClass = r.period === 'morning' ? 'morning' : 'evening';
-          const cat   = bpCategory(r.systolic, r.diastolic);
+          const cat    = bpCategory(r.systolic, r.diastolic);
           html += `<tr class="data-row">
             <td>${dd}</td>
             <td><span class="bp-period-badge ${pClass}">${pLabel}</span></td>
             <td><strong style="color:${cat.color}">${r.systolic}/${r.diastolic}</strong></td>
             <td>${r.pulse ? r.pulse : '—'}</td>
-            <td><span style="font-size:0.78rem;color:${cat.color};font-weight:600">${cat.label}</span></td>
             <td><button class="del-btn" onclick="deleteBPRecord('${r.date}','${r.period}')" title="삭제">✕</button></td>
           </tr>`;
         }
