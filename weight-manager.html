@@ -397,6 +397,46 @@
     body.dark .bp-period-badge.morning { background: #451a03; color: #fcd34d; }
     body.dark .bp-period-badge.evening { background: #2e1065; color: #c4b5fd; }
 
+    /* ── PDF 보고서 ── */
+    #reportArea { display: none; }
+    .rp-row { display: flex; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
+    .rp-row select {
+      flex: 1; min-width: 130px; padding: 10px 12px; border: 1px solid var(--border);
+      border-radius: 8px; font-size: 0.95rem; color: var(--text); background: var(--bg);
+    }
+    .rp-row .btn { margin-top: 0; flex: 1; min-width: 130px; }
+    .rp-checks { display: flex; gap: 16px; margin-top: 12px; font-size: 0.88rem; flex-wrap: wrap; }
+    .rp-checks label { display: flex; align-items: center; gap: 6px; margin: 0; color: var(--text); cursor: pointer; }
+
+    @media print {
+      @page { size: A4; margin: 12mm; }
+      body > *:not(#reportArea) { display: none !important; }
+      html, body { background: #fff !important; padding: 0 !important; overflow: visible !important; }
+      #reportArea { display: block !important; }
+    }
+
+    /* 보고서 내부 스타일 (항상 라이트 톤) */
+    #reportArea { color: #1e293b; background: #fff; font-family: 'Segoe UI','Malgun Gothic',system-ui,sans-serif; font-size: 11px; line-height: 1.45; }
+    #reportArea h1 { font-size: 22px; color: #4f8ef7; margin-bottom: 2px; }
+    #reportArea .rp-sub { color: #64748b; font-size: 11px; margin-bottom: 14px; border-bottom: 2px solid #4f8ef7; padding-bottom: 8px; }
+    #reportArea h2 { font-size: 15px; margin: 16px 0 8px; color: #1e293b; border-left: 4px solid #4f8ef7; padding-left: 8px; page-break-after: avoid; }
+    #reportArea h2.bp { border-left-color: #ef4444; }
+    #reportArea h3 { font-size: 12px; margin: 12px 0 6px; color: #475569; page-break-after: avoid; }
+    #reportArea .rp-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px; }
+    #reportArea .rp-card { border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; text-align: center; background: #f8fafc; page-break-inside: avoid; }
+    #reportArea .rp-card .v { font-size: 15px; font-weight: 700; }
+    #reportArea .rp-card .l { font-size: 10px; color: #64748b; margin-top: 2px; }
+    #reportArea img.rp-chart { width: 100%; border: 1px solid #e2e8f0; border-radius: 6px; page-break-inside: avoid; }
+    #reportArea table { width: 100%; border-collapse: collapse; font-size: 10.5px; min-width: 0; }
+    #reportArea thead { display: table-header-group; }
+    #reportArea th { background: #f1f5f9; color: #475569; padding: 5px 6px; border: 1px solid #e2e8f0; text-align: center; }
+    #reportArea td { padding: 4px 6px; border: 1px solid #e2e8f0; text-align: center; background: #fff; }
+    #reportArea tr { page-break-inside: avoid; }
+    #reportArea td.memo { text-align: left; color: #475569; }
+    #reportArea .rp-none { color: #94a3b8; padding: 12px 0; }
+    #reportArea .rp-foot { margin-top: 16px; font-size: 9.5px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 6px; }
+    #reportArea .rp-break { page-break-before: always; }
+
     /* ── 백업 알림 배너 ── */
     .bk-banner {
       max-width: 900px; margin: 0 auto 16px;
@@ -704,6 +744,30 @@
     <h2>혈압 기록 목록</h2>
     <div id="bpTableWrap"></div>
     <button class="btn btn-danger" onclick="clearAllBP()" style="max-width:200px">혈압 전체 삭제</button>
+  </div>
+
+  <!-- 보고서 섹션 -->
+  <div style="grid-column:1/-1;display:flex;align-items:center;gap:12px;margin:4px 0 -4px">
+    <span style="font-size:1rem;font-weight:700;color:var(--primary);white-space:nowrap">📄 보고서</span>
+    <div style="flex:1;height:1px;background:var(--border)"></div>
+  </div>
+  <div class="card full">
+    <h2>PDF 보고서 만들기</h2>
+    <p class="restore-info" style="margin-top:0">체중·혈압 요약, 추이 그래프, 기록표를 보고서로 만듭니다.<br>인쇄 창에서 <strong>PDF로 저장</strong>을 선택하세요.</p>
+    <div class="rp-checks">
+      <label><input type="checkbox" id="rpWeight" checked /> ⚖️ 체중</label>
+      <label><input type="checkbox" id="rpBP" checked /> 🩺 혈압</label>
+    </div>
+    <div class="rp-row" style="margin-top:12px">
+      <select id="rpPeriod">
+        <option value="30">최근 30일</option>
+        <option value="90">최근 90일</option>
+        <option value="180">최근 6개월</option>
+        <option value="365">최근 1년</option>
+        <option value="0">전체 기간</option>
+      </select>
+      <button class="btn btn-primary" onclick="generateReport()">📄 PDF 보고서 생성</button>
+    </div>
   </div>
 
   <!-- 백업 섹션 구분선 -->
@@ -1856,6 +1920,175 @@
     updateBPStats();
     updateBPChart();
     updateBPTable();
+  }
+
+  // ── PDF 보고서 ───────────────────────────────────────────
+  function esc(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  // 오프스크린 Chart.js → PNG data URL
+  function reportChartImage(labels, datasets, yUnit) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 900; canvas.height = 320;
+    const chart = new Chart(canvas.getContext('2d'), {
+      type: 'line',
+      data: { labels, datasets },
+      options: {
+        responsive: false, animation: false, devicePixelRatio: 1.5,
+        plugins: { legend: { position: 'bottom', labels: { boxWidth: 14, font: { size: 12 } } } },
+        scales: {
+          x: { grid: { display: false }, ticks: { maxTicksLimit: 12, font: { size: 11 } } },
+          y: { ticks: { callback: v => v + yUnit, font: { size: 11 } } }
+        }
+      },
+      plugins: [{
+        id: 'whiteBg',
+        beforeDraw(c) { const x = c.ctx; x.save(); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.restore(); }
+      }]
+    });
+    const url = canvas.toDataURL('image/png');
+    chart.destroy();
+    return url;
+  }
+
+  function avgNum(arr) { return arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null; }
+
+  function buildWeightSection(recs) {
+    let h = '<h2>⚖️ 체중 기록</h2>';
+    if (!recs.length) return h + '<p class="rp-none">해당 기간의 체중 기록이 없습니다.</p>';
+
+    const w     = recs.map(r => r.weight);
+    const first = w[0], last = w[w.length - 1];
+    const diff  = +(last - first).toFixed(1);
+    const goal  = dbGet('goal');
+    const hgt   = dbGet('height');
+    const dColor = diff < 0 ? '#22c55e' : diff > 0 ? '#ef4444' : '#64748b';
+
+    const cards = [
+      ['현재 체중', `${last}kg`, '#4f8ef7'],
+      ['기간 평균', `${avgNum(w).toFixed(1)}kg`, '#4f8ef7'],
+      ['기간 변화', `${diff > 0 ? '+' : ''}${diff}kg`, dColor],
+      ['최저', `${Math.min(...w)}kg`, '#22c55e'],
+      ['최고', `${Math.max(...w)}kg`, '#ef4444'],
+      ['기록일수', `${recs.length}일`, '#4f8ef7'],
+    ];
+    if (goal) cards.push(['목표 체중', `${goal.target}kg`, '#22c55e'], ['목표까지', `${Math.abs(last - goal.target).toFixed(1)}kg`, '#f59e0b']);
+    if (hgt)  cards.push(['BMI', (last / ((hgt / 100) ** 2)).toFixed(1), '#4f8ef7']);
+
+    h += '<div class="rp-cards">' + cards.map(([l, v, c]) =>
+      `<div class="rp-card"><div class="v" style="color:${c}">${v}</div><div class="l">${l}</div></div>`).join('') + '</div>';
+
+    const datasets = [{
+      label: '체중 (kg)', data: w, borderColor: '#4f8ef7', backgroundColor: 'rgba(79,142,247,0.1)',
+      borderWidth: 2.5, pointRadius: w.length > 60 ? 0 : 3, tension: 0.3, fill: true
+    }];
+    if (goal) datasets.push({ label: '목표', data: w.map(() => goal.target), borderColor: '#22c55e', borderDash: [6, 4], borderWidth: 1.5, pointRadius: 0, fill: false });
+    h += `<img class="rp-chart" src="${reportChartImage(recs.map(r => r.date.slice(2)), datasets, 'kg')}" />`;
+
+    h += '<h3>체중 기록표</h3><table><thead><tr><th>날짜</th><th>체중(kg)</th><th>변화</th><th>메모</th></tr></thead><tbody>';
+    recs.forEach((r, i) => {
+      let ch = '—', col = '#64748b';
+      if (i > 0) {
+        const d = +(r.weight - recs[i - 1].weight).toFixed(1);
+        if (d > 0) { ch = `▲ ${d}`; col = '#ef4444'; }
+        else if (d < 0) { ch = `▼ ${Math.abs(d)}`; col = '#22c55e'; }
+        else ch = '→';
+      }
+      h += `<tr><td>${r.date}</td><td><strong>${r.weight}</strong></td><td style="color:${col}">${ch}</td><td class="memo">${esc(r.memo)}</td></tr>`;
+    });
+    return h + '</tbody></table>';
+  }
+
+  function buildBPSection(recs) {
+    let h = '<h2 class="bp">🩺 혈압 기록</h2>';
+    if (!recs.length) return h + '<p class="rp-none">해당 기간의 혈압 기록이 없습니다.</p>';
+
+    const mor = recs.filter(r => r.period === 'morning');
+    const eve = recs.filter(r => r.period === 'evening');
+    const fmt = arr => arr.length
+      ? `${Math.round(avgNum(arr.map(r => r.systolic)))}/${Math.round(avgNum(arr.map(r => r.diastolic)))}` : '—';
+    const colorOf = arr => arr.length
+      ? bpCategory(avgNum(arr.map(r => r.systolic)), avgNum(arr.map(r => r.diastolic))).color : '#64748b';
+    const pulses = recs.filter(r => r.pulse).map(r => r.pulse);
+    const maxRec = recs.reduce((a, b) => b.systolic > a.systolic ? b : a);
+    const minRec = recs.reduce((a, b) => b.systolic < a.systolic ? b : a);
+    const allCat = bpCategory(avgNum(recs.map(r => r.systolic)), avgNum(recs.map(r => r.diastolic)));
+
+    const cards = [
+      ['전체 평균', fmt(recs), colorOf(recs)],
+      ['아침 평균', fmt(mor), colorOf(mor)],
+      ['저녁 평균', fmt(eve), colorOf(eve)],
+      ['평균 맥박', pulses.length ? `${Math.round(avgNum(pulses))}bpm` : '—', '#4f8ef7'],
+      ['최고 혈압', `${maxRec.systolic}/${maxRec.diastolic}`, '#ef4444'],
+      ['최저 혈압', `${minRec.systolic}/${minRec.diastolic}`, '#3b82f6'],
+    ];
+    h += '<div class="rp-cards">' + cards.map(([l, v, c]) =>
+      `<div class="rp-card"><div class="v" style="color:${c}">${v}</div><div class="l">${l}</div></div>`).join('') + '</div>';
+    h += `<p style="margin-bottom:8px">평균 기준 분류: <strong style="color:${allCat.color}">${allCat.label}</strong> · 총 ${recs.length}건 (아침 ${mor.length}, 저녁 ${eve.length})</p>`;
+
+    // 날짜별 피벗
+    const byDate = {};
+    recs.forEach(r => { (byDate[r.date] = byDate[r.date] || {})[r.period] = r; });
+    const dates = Object.keys(byDate).sort();
+    const pick = (p, k) => dates.map(d => byDate[d][p] ? byDate[d][p][k] : null);
+
+    const datasets = [
+      { label: '아침 수축기', data: pick('morning', 'systolic'),  borderColor: '#ef4444', borderWidth: 2, pointRadius: 3, tension: 0.2, spanGaps: true },
+      { label: '아침 이완기', data: pick('morning', 'diastolic'), borderColor: '#4f8ef7', borderWidth: 2, pointRadius: 3, tension: 0.2, spanGaps: true },
+      { label: '저녁 수축기', data: pick('evening', 'systolic'),  borderColor: '#f97316', borderDash: [5, 3], borderWidth: 2, pointRadius: 3, tension: 0.2, spanGaps: true },
+      { label: '저녁 이완기', data: pick('evening', 'diastolic'), borderColor: '#8b5cf6', borderDash: [5, 3], borderWidth: 2, pointRadius: 3, tension: 0.2, spanGaps: true },
+    ];
+    h += `<img class="rp-chart" src="${reportChartImage(dates.map(d => d.slice(2)), datasets, '')}" />`;
+
+    const cell = r => {
+      if (!r) return '<td>—</td><td>—</td>';
+      const c = bpCategory(r.systolic, r.diastolic);
+      return `<td><strong style="color:${c.color}">${r.systolic}/${r.diastolic}</strong></td><td>${r.pulse || '—'}</td>`;
+    };
+    h += '<h3>혈압 기록표</h3><table><thead><tr><th rowspan="2">날짜</th><th colspan="2">🌅 아침</th><th colspan="2">🌆 저녁</th></tr><tr><th>수축기/이완기</th><th>맥박</th><th>수축기/이완기</th><th>맥박</th></tr></thead><tbody>';
+    dates.forEach(d => { h += `<tr><td>${d}</td>${cell(byDate[d].morning)}${cell(byDate[d].evening)}</tr>`; });
+    h += '</tbody></table>';
+    h += '<p style="font-size:9.5px;color:#64748b;margin-top:6px">분류 색상: <span style="color:#3b82f6">저혈압</span> · <span style="color:#22c55e">정상</span> · <span style="color:#84cc16">주의혈압</span> · <span style="color:#f59e0b">고혈압 전단계</span> · <span style="color:#ef4444">1기</span> · <span style="color:#991b1b">2기 고혈압</span> (대한고혈압학회 기준)</p>';
+    return h;
+  }
+
+  function generateReport() {
+    const wantW = document.getElementById('rpWeight').checked;
+    const wantB = document.getElementById('rpBP').checked;
+    if (!wantW && !wantB) return alert('체중 또는 혈압 중 하나 이상 선택해주세요.');
+
+    const days   = parseInt(document.getElementById('rpPeriod').value);
+    const cutoff = days > 0 ? new Date(Date.now() - days * 86400000).toISOString().slice(0, 10) : '';
+    const inRange = r => !cutoff || r.date >= cutoff;
+
+    const wRecs  = wantW ? getRecords().filter(inRange) : [];
+    const bpRecs = wantB ? getBPRecords().filter(inRange) : [];
+    if (!wRecs.length && !bpRecs.length) return alert('선택한 기간에 보고서로 만들 기록이 없습니다.');
+
+    const todayStr = today();
+    const allDates = [...wRecs, ...bpRecs].map(r => r.date).sort();
+    const periodTxt = `${allDates[0]} ~ ${allDates[allDates.length - 1]}`;
+
+    let html = `<h1>⚖️ 건강 기록 보고서</h1>
+      <div class="rp-sub">조회 기간: ${periodTxt} · 작성일: ${todayStr}</div>`;
+    if (wantW) html += buildWeightSection(wRecs);
+    if (wantB) html += (wantW && wRecs.length > 15 ? '<div class="rp-break"></div>' : '') + buildBPSection(bpRecs);
+    html += '<div class="rp-foot">본 보고서는 체중관리 앱에 기록된 개인 측정값을 정리한 것으로, 의학적 진단을 대신하지 않습니다. 이상 수치가 지속되면 의료진과 상담하세요.</div>';
+
+    let area = document.getElementById('reportArea');
+    if (!area) { area = document.createElement('div'); area.id = 'reportArea'; document.body.appendChild(area); }
+    area.innerHTML = html;
+
+    const oldTitle = document.title;
+    document.title = `건강기록_보고서_${todayStr}`;
+    window.addEventListener('afterprint', function done() {
+      document.title = oldTitle;
+      area.innerHTML = '';
+      window.removeEventListener('afterprint', done);
+    });
+    // 이미지 디코딩 후 인쇄
+    setTimeout(() => window.print(), 300);
   }
 
   // ── Render ────────────────────────────────────────────────
