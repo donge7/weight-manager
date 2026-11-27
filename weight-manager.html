@@ -1857,6 +1857,11 @@
     const recs = getBPRecords();
     if (!recs.length) { wrap.innerHTML = '<p class="empty">기록이 없습니다.</p>'; return; }
 
+    // 다시 그릴 때 사용자가 펼쳐 둔 상태 유지 (처음에는 최신 달만 펼침)
+    const hadState = !!wrap.querySelector('.accordion');
+    const openIds  = new Set([...wrap.querySelectorAll('[id^="bp-"]')]
+      .filter(el => el.style.display !== 'none').map(el => el.id));
+
     const reversed = [...recs].reverse();
     const years = []; const byYear = {};
     for (const r of reversed) {
@@ -1870,7 +1875,7 @@
     years.forEach((year, yi) => {
       const ydata = byYear[year];
       const total = ydata.months.reduce((s,m) => s + ydata.byMonth[m].length, 0);
-      const isLatestY = yi === 0;
+      const isLatestY = hadState ? openIds.has(`bp-y-${year}`) : yi === 0;
       html += `
         <div class="acc-year-hd" onclick="toggleAcc('bp-y-${year}')">
           <span>${year}년</span>
@@ -1881,13 +1886,15 @@
 
       ydata.months.forEach((month, mi) => {
         const mRecs = ydata.byMonth[month];
-        const isLatestM = isLatestY && mi === 0;
+        const isLatestM = hadState ? openIds.has(`bp-m-${month}`) : (yi === 0 && mi === 0);
         const monthLabel = parseInt(month.slice(5)) + '월';
+        const avgSys = Math.round(mRecs.reduce((s, r) => s + r.systolic, 0) / mRecs.length);
+        const avgDia = Math.round(mRecs.reduce((s, r) => s + r.diastolic, 0) / mRecs.length);
 
         html += `
           <div class="acc-month-hd" onclick="toggleAcc('bp-m-${month}')">
             <span>${monthLabel}</span>
-            <span class="acc-meta">${mRecs.length}건</span>
+            <span class="acc-meta">${mRecs.length}건 · 평균 ${avgSys}/${avgDia}</span>
             <span class="acc-arrow" id="arr-bp-m-${month}">${isLatestM?'▲':'▼'}</span>
           </div>
           <div id="bp-m-${month}" style="${isLatestM?'':'display:none'}">
